@@ -18,25 +18,34 @@ const ProductPage = () => {
       id: 1,
       name: "Product 1",
       category: "Category 1",
-      price: "$10",
+      subCategory: "Sub Category 1",
+      price: "10",
       available: true,
-      image: "https://via.placeholder.com/150",
+      image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
+      ingredients: ["Ingredient 1", "Ingredient 2"],
     },
     {
       id: 2,
       name: "Product 2",
       category: "Category 2",
-      price: "$20",
+      subCategory: "Sub Category 2",
+      price: "20",
       available: false,
-      image: "https://via.placeholder.com/150",
+      image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
+      ingredients: ["Ingredient 3", "Ingredient 4"],
     },
     {
       id: 3,
       name: "Product 3",
       category: "Category 3",
-      price: "$30",
+      subCategory: "Sub Category 3",
+      price: "30",
       available: true,
-      image: "https://via.placeholder.com/150",
+      image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
+      ingredients: ["Ingredient 5", "Ingredient 6"],
     },
   ]);
   const [isFormVisible, setFormVisible] = useState(false);
@@ -88,19 +97,19 @@ const ProductPage = () => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-brown-500">Products</h2>
           <div className="flex items-center space-x-4">
-            <div className="relative">
+            <div className="relative flex-1">
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
+                className="p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
               />
               <FaSearch className="absolute top-3 left-2 text-gray-500" />
             </div>
             <button
               onClick={() => setFormVisible(!isFormVisible)}
-              className="flex items-center px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+              className="flex items-center px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600 md:px-6 md:py-3 md:text-lg"
             >
               <FaPlus className="mr-2" />{" "}
               {isFormVisible ? "Cancel" : "Add Product"}
@@ -122,7 +131,9 @@ const ProductPage = () => {
                 <th className="py-3 px-4 text-left">ID</th>
                 <th className="py-3 px-4 text-left">Name</th>
                 <th className="py-3 px-4 text-left">Category</th>
+                <th className="py-3 px-4 text-left">Sub Category</th>
                 <th className="py-3 px-4 text-left">Price</th>
+                <th className="py-3 px-4 text-left">Ingredients</th>
                 <th className="py-3 px-4 text-left">Status</th>
                 <th className="py-3 px-4 text-left">Actions</th>
               </tr>
@@ -133,7 +144,14 @@ const ProductPage = () => {
                   <td className="py-3 px-4">{product.id}</td>
                   <td className="py-3 px-4">{product.name}</td>
                   <td className="py-3 px-4">{product.category}</td>
-                  <td className="py-3 px-4">{product.price}</td>
+                  <td className="py-3 px-4">{product.subCategory}</td>
+                  <td className="py-3 px-4">
+                    {"P "}
+                    {product.price}
+                  </td>
+                  <td className="py-3 px-4">
+                    {product.ingredients.join(", ")}
+                  </td>
                   <td className="py-3 px-4 text-center">
                     <button
                       onClick={() => toggleAvailability(product.id)}

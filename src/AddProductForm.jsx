@@ -1,103 +1,158 @@
 // AddProductForm.js
 import React, { useState } from "react";
-import { FaUpload } from "react-icons/fa";
 
 const AddProductForm = ({ onAddProduct }) => {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [subCategory, setSubCategory] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
+  const [ingredients, setIngredients] = useState([""]);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!name || !category || !price) {
-      alert("Please fill in all fields.");
-      return;
-    }
+  const handleIngredientChange = (index, value) => {
+    const newIngredients = [...ingredients];
+    newIngredients[index] = value;
+    setIngredients(newIngredients);
+  };
+
+  const addIngredientField = () => {
+    setIngredients([...ingredients, ""]);
+  };
+
+  const removeIngredientField = (index) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
     const newProduct = {
       id: Date.now(),
       name,
       category,
+      subCategory,
       price,
       available: true,
-      image: URL.createObjectURL(image),
+      image: image ? URL.createObjectURL(image) : "",
+      ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
     };
     onAddProduct(newProduct);
     setName("");
     setCategory("");
+    setSubCategory("");
     setPrice("");
     setImage(null);
+    setIngredients([""]);
   };
 
   return (
-    <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
+    <form
+      onSubmit={handleSubmit}
+      className="p-6 bg-white shadow-lg rounded-lg mt-6"
+    >
       <h2 className="text-2xl font-bold text-brown-500 mb-4">Add Product</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="name">
-            Name
-          </label>
-          <input
-            type="text"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="category">
-            Category
-          </label>
-          <input
-            type="text"
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="price">
-            Price
-          </label>
-          <input
-            type="text"
-            id="price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="image">
-            Image
-          </label>
-          <input
-            type="file"
-            id="image"
-            accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
-          />
-          {image && (
-            <div className="mt-4">
-              <img
-                src={URL.createObjectURL(image)}
-                alt="Product"
-                className="w-32 h-32 object-cover"
-              />
-            </div>
-          )}
-        </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full p-2 border rounded-lg"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Category</label>
+        <input
+          type="text"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-2 border rounded-lg"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Sub Category</label>
+        <input
+          type="text"
+          value={subCategory}
+          onChange={(e) => setSubCategory(e.target.value)}
+          className="w-full p-2 border rounded-lg"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Price</label>
+        <input
+          type="text"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="w-full p-2 border rounded-lg"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Image</label>
+        <input
+          type="file"
+          onChange={(e) => setImage(e.target.files[0])}
+          className="w-full p-2 border rounded-lg"
+        />
+        {image && (
+          <div className="mt-4">
+            <img
+              src={URL.createObjectURL(image)}
+              alt="Product Preview"
+              className="w-48 h-48 object-cover mt-2"
+            />
+          </div>
+        )}
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700">Ingredients</label>
+        {ingredients.map((ingredient, index) => (
+          <div key={index} className="flex items-center mb-2">
+            <input
+              type="text"
+              value={ingredient}
+              onChange={(e) => handleIngredientChange(index, e.target.value)}
+              className="w-full p-2 border rounded-lg mr-2"
+              placeholder="Ingredient"
+            />
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={() => removeIngredientField(index)}
+                className="px-2 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addIngredientField}
+          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+        >
+          Add Ingredient
+        </button>
+      </div>
+      <div className="flex justify-end space-x-4">
+        <button
+          type="button"
+          onClick={() => setFormVisible(false)}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+        >
+          Cancel
+        </button>
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
         >
           Add Product
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
 
