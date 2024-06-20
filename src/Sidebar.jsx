@@ -36,13 +36,13 @@ const Sidebar = () => {
 
   return (
     <>
+      {/* Menu Button */}
       <button
         type="button"
-        className="inline-flex items-center p-3 mt-2 mr-2 text-sm text-black rounded-full sm:hidden hover:bg-gray-100 shadow-xl drop-shadow-xl"
+        className="fixed top-4 right-4 z-50 p-3 text-sm text-black rounded-full sm:hidden hover:bg-gray-100 shadow-xl drop-shadow-xl"
         onClick={toggleSidebar}
-        style={{ position: "absolute", top: ".1rem", right: "1rem" }} // Position the button on the right
       >
-        <span className="sr-only">Open sidebar</span>
+        <span className="sr-only">Toggle sidebar</span>
         {isOpen ? (
           <FaTimes className="w-6 h-6" />
         ) : (
@@ -50,9 +50,10 @@ const Sidebar = () => {
         )}
       </button>
 
+      {/* Sidebar */}
       <aside
         id="default-sidebar"
-        className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform  ${
+        className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } sm:translate-x-0`}
         aria-label="Sidebar"

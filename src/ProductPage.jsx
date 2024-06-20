@@ -133,7 +133,6 @@ const ProductPage = () => {
                 <th className="py-3 px-4 text-left">Category</th>
                 <th className="py-3 px-4 text-left">Sub Category</th>
                 <th className="py-3 px-4 text-left">Price</th>
-                <th className="py-3 px-4 text-left">Ingredients</th>
                 <th className="py-3 px-4 text-left">Status</th>
                 <th className="py-3 px-4 text-left">Actions</th>
               </tr>
@@ -148,9 +147,6 @@ const ProductPage = () => {
                   <td className="py-3 px-4">
                     {"P "}
                     {product.price}
-                  </td>
-                  <td className="py-3 px-4">
-                    {product.ingredients.join(", ")}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <button
