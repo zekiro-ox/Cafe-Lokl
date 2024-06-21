@@ -10,14 +10,21 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // State for loading animation
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsLoading(true); // Show loading animation
     // Simulated login logic with hardcoded credentials
     if (email === "user@example.com" && password === "password") {
-      // Redirect to dashboard upon successful login
-      navigate("/dashboard");
+      // Simulate API call delay for 1.5 seconds (to demonstrate loading)
+      setTimeout(() => {
+        setIsLoading(false); // Hide loading animation
+        // Redirect to dashboard upon successful login
+        navigate("/dashboard");
+      }, 1500);
     } else {
+      setIsLoading(false); // Hide loading animation
       setError("Invalid email or password. Please try again.");
     }
   };
@@ -101,8 +108,9 @@ const Login = () => {
           <button
             type="submit"
             className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600"
+            disabled={isLoading} // Disable button during loading
           >
-            Sign In
+            {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </div>
