@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa"; // Importing icons
 import logo from "./assets/logo.png"; // Update the path as necessary
+import "./Login.css"; // Import CSS for styling
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true); // Show loading animation
+
     // Simulated login logic with hardcoded credentials
     if (email === "user@example.com" && password === "password") {
       // Simulate API call delay for 1.5 seconds (to demonstrate loading)
@@ -107,9 +109,10 @@ const Login = () => {
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600"
+            className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600 relative"
             disabled={isLoading} // Disable button during loading
           >
+            {isLoading && <div className="loading-spinner"></div>}
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
