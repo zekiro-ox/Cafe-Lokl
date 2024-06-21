@@ -95,7 +95,6 @@ const ProductPage = () => {
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-brown-500">Products</h2>
           <div className="flex items-center space-x-4">
             <div className="relative flex-1">
               <input

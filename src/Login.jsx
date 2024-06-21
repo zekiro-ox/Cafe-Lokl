@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa"; // Importing icons
+import logo from "./assets/logo.png"; // Update the path as necessary
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,6 +29,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown-400">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-96">
+        <div className="flex justify-center mb-4">
+          <img src={logo} alt="Logo" className="h-20 w-auto" />
+        </div>
         <h2 className="text-3xl mb-4 text-center font-bold text-brown-500">
           Login Now
         </h2>

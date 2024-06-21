@@ -11,6 +11,7 @@ import {
   FaUserShield,
 } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
+import logo from "./assets/logo.png"; // Update the path as necessary
 
 const Sidebar = () => {
   const location = useLocation();
@@ -60,6 +61,9 @@ const Sidebar = () => {
         style={{ backgroundColor: "#B36636" }} // Set background color to brown
       >
         <div className="h-full px-3 py-4 overflow-y-auto m-2">
+          <div className="flex items-center justify-center mb-4">
+            <img src={logo} alt="Logo" className="h-20 w-auto" />
+          </div>
           <ul className="space-y-2 font-medium text-white">
             <li className="flex items-center p-4 rounded text-white font-bold text-2xl">
               <FaUserShield className="flex-shrink-0 w-5 h-5 mr-2" />
@@ -96,7 +100,7 @@ const Sidebar = () => {
             <li>
               <Link
                 to="/employee-logs"
-                className={`flex items-center p-4 rounded${
+                className={`flex items-center p-4 rounded ${
                   activeLink === "/employee-logs"
                     ? "bg-gray-200 text-black"
                     : "text-white hover:bg-gray-200 hover:text-black"
