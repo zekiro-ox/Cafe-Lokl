@@ -1,9 +1,22 @@
-// EditProductForm.js
 import React, { useState, useEffect } from "react";
 
 const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   const [name, setName] = useState(product.name);
+  const [categoryOptions] = useState([
+    "Hot Drinks",
+    "Ice Blended",
+    "Non Coffee",
+    "Tea",
+    "Mocktails",
+  ]); // Example categories for coffee products
   const [category, setCategory] = useState(product.category);
+  const [subCategoryOptions, setSubCategoryOptions] = useState({
+    "Hot Drinks": ["Espresso", "Cappuccino", "Latte", "Macchiato"],
+    "Ice Blended": ["Frappuccino", "Iced Latte", "Smoothie"],
+    "Non Coffee": ["Hot Chocolate", "Tea Latte", "Chai Latte"],
+    Tea: ["Black Tea", "Green Tea", "Herbal Tea"],
+    Mocktails: ["Mango Tango", "Berry Bliss", "Tropical Sunset"],
+  });
   const [subCategory, setSubCategory] = useState(product.subCategory);
   const [price, setPrice] = useState(product.price);
   const [image, setImage] = useState(product.image);
@@ -55,6 +68,12 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
     onUpdateProduct(updatedProduct);
   };
 
+  const handleCategoryChange = (e) => {
+    const selectedCategory = e.target.value;
+    setCategory(selectedCategory);
+    setSubCategory(""); // Reset subCategory when category changes
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -73,24 +92,38 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       </div>
       <div className="mb-4">
         <label className="block text-gray-700">Category</label>
-        <input
-          type="text"
+        <select
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={handleCategoryChange}
           className="w-full p-2 border rounded-lg"
           required
-        />
+        >
+          <option value="">Select Category</option>
+          {categoryOptions.map((option, index) => (
+            <option key={index} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="mb-4">
-        <label className="block text-gray-700">Sub Category</label>
-        <input
-          type="text"
-          value={subCategory}
-          onChange={(e) => setSubCategory(e.target.value)}
-          className="w-full p-2 border rounded-lg"
-          required
-        />
-      </div>
+      {category && (
+        <div className="mb-4">
+          <label className="block text-gray-700">Sub Category</label>
+          <select
+            value={subCategory}
+            onChange={(e) => setSubCategory(e.target.value)}
+            className="w-full p-2 border rounded-lg"
+            required
+          >
+            <option value="">Select Sub Category</option>
+            {subCategoryOptions[category].map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="mb-4">
         <label className="block text-gray-700">Price</label>
         <input
