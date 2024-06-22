@@ -23,7 +23,6 @@ const Inventory = () => {
   const [isFormVisible, setFormVisible] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
-    productId: "",
     available: true,
     onHand: 0,
   });
@@ -41,11 +40,18 @@ const Inventory = () => {
     setSearchTerm(event.target.value);
   };
 
+  const generateProductId = () => {
+    const randomNumber = Math.floor(1000 + Math.random() * 9000); // Generates a random 4-digit number
+    return `P${randomNumber}`;
+  };
+
   const handleAddItem = () => {
-    console.log("Adding new item to inventory:", newItem);
-    setItems((prevItems) => [...prevItems, newItem]);
+    const generatedProductId = generateProductId();
+    const newItemWithId = { ...newItem, productId: generatedProductId };
+    console.log("Adding new item to inventory:", newItemWithId);
+    setItems((prevItems) => [...prevItems, newItemWithId]);
     setFormVisible(false);
-    setNewItem({ name: "", productId: "", available: true, onHand: 0 });
+    setNewItem({ name: "", available: true, onHand: 0 });
   };
 
   const toggleAvailability = (id) => {
@@ -113,15 +119,6 @@ const Inventory = () => {
               className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
             />
             <input
-              type="text"
-              placeholder="Product ID"
-              value={newItem.productId}
-              onChange={(e) =>
-                setNewItem({ ...newItem, productId: e.target.value })
-              }
-              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
-            />
-            <input
               type="number"
               placeholder="On Hand"
               value={newItem.onHand}
@@ -179,23 +176,7 @@ const Inventory = () => {
                         item.name
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      {isEditing && editItemId === item.id ? (
-                        <input
-                          type="text"
-                          value={editedItem.productId}
-                          onChange={(e) =>
-                            setEditedItem({
-                              ...editedItem,
-                              productId: e.target.value,
-                            })
-                          }
-                          className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
-                        />
-                      ) : (
-                        item.productId
-                      )}
-                    </td>
+                    <td className="py-3 px-4">{item.productId}</td>
                     <td className="py-3 px-4 text-center">
                       {item.available ? (
                         <button
