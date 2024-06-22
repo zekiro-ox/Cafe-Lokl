@@ -2,25 +2,54 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
-import { subDays, format } from "date-fns"; // Import date-fns for date manipulation
+import {
+  subDays,
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+} from "date-fns";
 
 const SalesReport = ({ salesData }) => {
   const [filter, setFilter] = useState("weekly");
+  const [currentMonth, setCurrentMonth] = useState(0); // 0 means the current month
   const [filteredSalesData, setFilteredSalesData] = useState([]);
 
   useEffect(() => {
     const today = new Date();
+    const startOfCurrentWeek = startOfWeek(today);
+    const endOfCurrentWeek = endOfWeek(today);
+
     const filteredData = salesData.filter((item) => {
       const itemDate = new Date(item.date);
+
       if (filter === "weekly") {
-        return itemDate >= subDays(today, 7);
+        const startDate = subDays(startOfCurrentWeek, currentMonth * 7);
+        const endDate = subDays(endOfCurrentWeek, currentMonth * 7);
+        return itemDate >= startDate && itemDate <= endDate;
       } else if (filter === "monthly") {
-        return itemDate >= subDays(today, 30);
+        const startOfSelectedMonth = startOfMonth(
+          addMonths(today, currentMonth)
+        );
+        const endOfSelectedMonth = endOfMonth(addMonths(today, currentMonth));
+        return (
+          itemDate >= startOfSelectedMonth && itemDate <= endOfSelectedMonth
+        );
       }
       return true;
     });
     setFilteredSalesData(filteredData);
-  }, [filter, salesData]);
+  }, [filter, salesData, currentMonth]);
+
+  useEffect(() => {
+    // Initialize currentMonth to 0 when filter is set to "monthly"
+    if (filter === "monthly") {
+      setCurrentMonth(0);
+    }
+  }, [filter]);
 
   const totalSales = filteredSalesData.reduce(
     (acc, item) => acc + item.sales,
@@ -30,7 +59,8 @@ const SalesReport = ({ salesData }) => {
     (acc, item) => acc + item.revenue,
     0
   );
-  const averageSalesPerDay = totalSales / filteredSalesData.length;
+  const averageSalesPerDay =
+    filteredSalesData.length > 0 ? totalSales / filteredSalesData.length : 0; // Avoid division by zero
 
   const chartData = {
     labels: filteredSalesData.map((item) =>
@@ -71,6 +101,14 @@ const SalesReport = ({ salesData }) => {
     },
   };
 
+  const handlePeriodChange = (direction) => {
+    if (filter === "weekly") {
+      setCurrentMonth((prevMonth) => prevMonth + direction);
+    } else if (filter === "monthly") {
+      setCurrentMonth((prevMonth) => prevMonth + direction);
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       <Sidebar />
@@ -91,14 +129,53 @@ const SalesReport = ({ salesData }) => {
             <h3 className="text-2xl font-bold text-brown-500">
               Sales and Revenue Over Time
             </h3>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="p-2 border border-gray-300 rounded"
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
+            <div className="flex items-center space-x-4">
+              <select
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value);
+                  setCurrentMonth(0); // Reset currentMonth when changing filters
+                }}
+                className="p-2 border border-gray-300 rounded"
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+              {filter === "weekly" && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePeriodChange(-1)}
+                    disabled={currentMonth === 0} // Disable if it's the current week
+                    className="p-2 border border-gray-300 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Next Week
+                  </button>
+                  <button
+                    onClick={() => handlePeriodChange(1)}
+                    className="p-2 border border-gray-300 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Previous Week
+                  </button>
+                </div>
+              )}
+              {filter === "monthly" && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePeriodChange(1)}
+                    disabled={currentMonth === 0} // Disable if it's the current month
+                    className="p-2 border border-gray-300 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Next Month
+                  </button>
+                  <button
+                    onClick={() => handlePeriodChange(-1)}
+                    className="p-2 border border-gray-300 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Previous Month
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <Line data={chartData} options={chartOptions} />
         </div>

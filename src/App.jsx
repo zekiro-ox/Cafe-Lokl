@@ -7,7 +7,7 @@ import EmployeeLog from "./EmployeeLogs";
 import SalesReport from "./SalesReport";
 
 // Generate more dummy data for the past 60 days
-const salesData = Array.from({ length: 60 }, (_, i) => {
+const salesData = Array.from({ length: 150 }, (_, i) => {
   const date = new Date();
   date.setDate(date.getDate() - i);
   return {
