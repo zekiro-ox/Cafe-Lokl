@@ -12,6 +12,8 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const SalesReport = ({ salesData }) => {
   const [filter, setFilter] = useState("weekly");
@@ -109,6 +111,13 @@ const SalesReport = ({ salesData }) => {
     }
   };
 
+  const downloadSalesReport = () => {
+    const worksheet = XLSX.utils.json_to_sheet(filteredSalesData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+    XLSX.writeFile(workbook, "sales_report.xlsx");
+  };
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       <Sidebar />
@@ -175,6 +184,12 @@ const SalesReport = ({ salesData }) => {
                   </button>
                 </div>
               )}
+              <button
+                onClick={downloadSalesReport}
+                className="p-2 border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600"
+              >
+                Download Excel
+              </button>
             </div>
           </div>
           <Line data={chartData} options={chartOptions} />
