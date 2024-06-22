@@ -31,7 +31,7 @@ const ProductPage = () => {
       category: "Category 2",
       subCategory: "Sub Category 2",
       price: "20",
-      available: false,
+      available: true,
       image:
         "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
       ingredients: ["Ingredient 3", "Ingredient 4"],

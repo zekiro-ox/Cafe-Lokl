@@ -10,7 +10,7 @@ const AddProductForm = ({ onAddProduct }) => {
     "Mocktails",
   ]); // Example categories for coffee products
   const [category, setCategory] = useState("");
-  const [subCategoryOptions, setSubCategoryOptions] = useState({
+  const [subCategoryOptions] = useState({
     "Hot Drinks": ["Espresso", "Cappuccino", "Latte", "Macchiato"],
     "Ice Blended": ["Frappuccino", "Iced Latte", "Smoothie"],
     "Non Coffee": ["Hot Chocolate", "Tea Latte", "Chai Latte"],
@@ -21,6 +21,7 @@ const AddProductForm = ({ onAddProduct }) => {
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
   const [ingredients, setIngredients] = useState([""]);
+  const [showRemoveButtons, setShowRemoveButtons] = useState(false); // State to track when to show remove buttons
 
   const handleIngredientChange = (index, value) => {
     const newIngredients = [...ingredients];
@@ -30,10 +31,13 @@ const AddProductForm = ({ onAddProduct }) => {
 
   const addIngredientField = () => {
     setIngredients([...ingredients, ""]);
+    setShowRemoveButtons(true); // Show remove buttons after adding at least one ingredient
   };
 
   const removeIngredientField = (index) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
+    const newIngredients = [...ingredients];
+    newIngredients.splice(index, 1);
+    setIngredients(newIngredients);
   };
 
   const handleSubmit = (e) => {
@@ -55,12 +59,17 @@ const AddProductForm = ({ onAddProduct }) => {
     setPrice("");
     setImage(null);
     setIngredients([""]);
+    setShowRemoveButtons(false); // Reset to hide remove buttons after submission
   };
 
   const handleCategoryChange = (e) => {
     const selectedCategory = e.target.value;
     setCategory(selectedCategory);
     setSubCategory(""); // Reset subCategory when category changes
+  };
+
+  const handleSubCategoryChange = (e) => {
+    setSubCategory(e.target.value);
   };
 
   return (
@@ -98,19 +107,14 @@ const AddProductForm = ({ onAddProduct }) => {
       {category && (
         <div className="mb-4">
           <label className="block text-gray-700">Sub Category</label>
-          <select
+          <input
+            type="text"
             value={subCategory}
-            onChange={(e) => setSubCategory(e.target.value)}
+            onChange={handleSubCategoryChange}
             className="w-full p-2 border rounded-lg"
+            placeholder="Enter Sub Category"
             required
-          >
-            <option value="">Select Sub Category</option>
-            {subCategoryOptions[category].map((option, index) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       )}
       <div className="mb-4">
@@ -151,7 +155,7 @@ const AddProductForm = ({ onAddProduct }) => {
               className="w-full p-2 border rounded-lg mr-2"
               placeholder="Ingredient"
             />
-            {index > 0 && (
+            {showRemoveButtons && (
               <button
                 type="button"
                 onClick={() => removeIngredientField(index)}
