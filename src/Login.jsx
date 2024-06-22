@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
@@ -14,6 +14,15 @@ const Login = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const storedEmail = localStorage.getItem("rememberedEmail");
+    if (storedEmail) {
+      setEmail(storedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +33,12 @@ const Login = () => {
       await signInWithEmailAndPassword(auth, email, password);
 
       setIsLoading(false);
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+
       navigate("/dashboard"); // Redirect upon successful login
     } catch (error) {
       setIsLoading(false);
@@ -34,6 +49,10 @@ const Login = () => {
 
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
+  };
+
+  const handleRememberMe = () => {
+    setRememberMe((prevRememberMe) => !prevRememberMe);
   };
 
   return (
@@ -99,6 +118,8 @@ const Login = () => {
               name="remember"
               type="checkbox"
               className="h-4 w-4 text-brown-600 focus:ring-brown-500 border-gray-300 rounded"
+              checked={rememberMe}
+              onChange={handleRememberMe}
             />
             <label
               htmlFor="remember"
