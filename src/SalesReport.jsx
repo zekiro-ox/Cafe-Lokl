@@ -138,7 +138,7 @@ const SalesReport = ({ salesData }) => {
             <h3 className="text-2xl font-bold text-brown-500">
               Sales and Revenue Over Time
             </h3>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col lg:flex-row items-center space-y-2 lg:space-y-0 lg:space-x-4">
               <select
                 value={filter}
                 onChange={(e) => {
@@ -186,44 +186,46 @@ const SalesReport = ({ salesData }) => {
               )}
               <button
                 onClick={downloadSalesReport}
-                className="p-2 border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600"
+                className="p-2 border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 mt-2 lg:mt-0"
               >
                 Download Excel
               </button>
             </div>
           </div>
-          <Line data={chartData} options={chartOptions} />
-        </div>
-
-        <div className="flex flex-col lg:flex-row mt-6 space-y-6 lg:space-x-6 lg:space-y-0">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full lg:w-1/2">
-            <h3 className="text-2xl mb-4 text-center font-bold text-brown-500">
-              Sales Summary
-            </h3>
-            <div className="space-y-4">
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <h4 className="text-lg font-semibold text-brown-500">
-                  Total Sales
-                </h4>
-                <p className="text-gray-700">{totalSales} units sold</p>
-              </div>
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <h4 className="text-lg font-semibold text-brown-500">
-                  Revenue
-                </h4>
-                <p className="text-gray-700">${totalRevenue.toFixed(2)}</p>
-              </div>
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <h4 className="text-lg font-semibold text-brown-500">
-                  Average Sales per Day
-                </h4>
-                <p className="text-gray-700">
-                  {averageSalesPerDay.toFixed(2)} units
-                </p>
+          <div className="lg:flex lg:space-x-6">
+            <div className="w-full lg:w-2/3">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+            <div className="w-full lg:w-1/3 mt-6 lg:mt-0">
+              <div className="bg-white p-6 rounded-2xl shadow-2xl">
+                <h3 className="text-2xl mb-4 text-center font-bold text-brown-500">
+                  Sales Summary
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold text-brown-500">
+                      Total Sales
+                    </h4>
+                    <p className="text-gray-700">{totalSales} units sold</p>
+                  </div>
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold text-brown-500">
+                      Revenue
+                    </h4>
+                    <p className="text-gray-700">${totalRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                    <h4 className="text-lg font-semibold text-brown-500">
+                      Average Sales per Day
+                    </h4>
+                    <p className="text-gray-700">
+                      {averageSalesPerDay.toFixed(2)} units
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          {/* Additional content can go here */}
         </div>
       </div>
     </div>

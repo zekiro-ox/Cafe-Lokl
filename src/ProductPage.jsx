@@ -1,4 +1,3 @@
-// ProductPage.js
 import React, { useState } from "react";
 import {
   FaPlus,
@@ -6,6 +5,7 @@ import {
   FaToggleOn,
   FaToggleOff,
   FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import AddProductForm from "./AddProductForm";
@@ -86,6 +86,12 @@ const ProductPage = () => {
     setEditProduct(null);
   };
 
+  const handleDeleteProduct = (id) => {
+    setProducts((prevProducts) =>
+      prevProducts.filter((product) => product.id !== id)
+    );
+  };
+
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -164,12 +170,18 @@ const ProductPage = () => {
                       {product.available ? "Available" : "Not Available"}
                     </button>
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="flex items-center  py-3 px-4 text-center space-x-2">
                     <button
                       onClick={() => handleEditProduct(product)}
-                      className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                      className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 md:mr-2"
                     >
                       <FaEdit className="mr-2" /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 md:mr-2"
+                    >
+                      <FaTrash className="mr-2" /> Delete
                     </button>
                   </td>
                 </tr>
