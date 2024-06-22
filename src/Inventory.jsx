@@ -27,8 +27,7 @@ const Inventory = () => {
     onHand: 0,
   });
 
-  const [isEditing, setEditing] = useState(false);
-  const [editItemId, setEditItemId] = useState(null);
+  const [editItemIndex, setEditItemIndex] = useState(null); // Track index of item being edited
   const [editedItem, setEditedItem] = useState({
     name: "",
     productId: "",
@@ -48,7 +47,6 @@ const Inventory = () => {
   const handleAddItem = () => {
     const generatedProductId = generateProductId();
     const newItemWithId = { ...newItem, productId: generatedProductId };
-    console.log("Adding new item to inventory:", newItemWithId);
     setItems((prevItems) => [...prevItems, newItemWithId]);
     setFormVisible(false);
     setNewItem({ name: "", available: true, onHand: 0 });
@@ -62,26 +60,25 @@ const Inventory = () => {
     );
   };
 
-  const handleEditItem = (id) => {
-    setEditing(true);
-    setEditItemId(id);
-    const itemToEdit = items.find((item) => item.id === id);
+  const handleEditItem = (index) => {
+    setEditItemIndex(index); // Set the index of the item being edited
+    const itemToEdit = items[index];
     if (itemToEdit) {
-      setEditedItem({
-        ...itemToEdit,
-      });
+      setEditedItem({ ...itemToEdit });
     }
   };
 
   const handleUpdateItem = () => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === editItemId ? { ...editedItem, id: editItemId } : item
-      )
-    );
-    setEditing(false);
-    setEditItemId(null);
-    setEditedItem({ name: "", productId: "", available: true, onHand: 0 });
+    if (editItemIndex !== null) {
+      const updatedItems = [...items];
+      updatedItems[editItemIndex] = {
+        ...editedItem,
+        id: items[editItemIndex].id,
+      };
+      setItems(updatedItems);
+      setEditItemIndex(null);
+      setEditedItem({ name: "", productId: "", available: true, onHand: 0 });
+    }
   };
 
   return (
@@ -160,7 +157,7 @@ const Inventory = () => {
                   <tr key={item.id} className="border-b">
                     <td className="py-3 px-4">{index + 1}</td>
                     <td className="py-3 px-4">
-                      {isEditing && editItemId === item.id ? (
+                      {editItemIndex === index ? (
                         <input
                           type="text"
                           value={editedItem.name}
@@ -195,7 +192,7 @@ const Inventory = () => {
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {isEditing && editItemId === item.id ? (
+                      {editItemIndex === index ? (
                         <input
                           type="number"
                           value={editedItem.onHand}
@@ -212,7 +209,7 @@ const Inventory = () => {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {isEditing && editItemId === item.id ? (
+                      {editItemIndex === index ? (
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={handleUpdateItem}
@@ -222,8 +219,7 @@ const Inventory = () => {
                           </button>
                           <button
                             onClick={() => {
-                              setEditing(false);
-                              setEditItemId(null);
+                              setEditItemIndex(null);
                               setEditedItem({
                                 name: "",
                                 productId: "",
@@ -238,7 +234,7 @@ const Inventory = () => {
                         </div>
                       ) : (
                         <button
-                          onClick={() => handleEditItem(item.id)}
+                          onClick={() => handleEditItem(index)}
                           className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                         >
                           <FaEdit className="mr-2" /> Edit
