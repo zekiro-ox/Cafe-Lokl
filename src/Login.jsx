@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // Importing icons
-import logo from "./assets/logo.png"; // Update the path as necessary
-import "./Login.css"; // Import CSS for styling
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import logo from "./assets/logo.png";
+import "./Login.css";
+import { auth } from "./config/firebase"; // Import Firebase authentication
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,23 +12,22 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // State for loading animation
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Show loading animation
+    setIsLoading(true);
 
-    // Simulated login logic with hardcoded credentials
-    if (email === "user@example.com" && password === "password") {
-      // Simulate API call delay for 1.5 seconds (to demonstrate loading)
-      setTimeout(() => {
-        setIsLoading(false); // Hide loading animation
-        // Redirect to dashboard upon successful login
-        navigate("/dashboard");
-      }, 1500);
-    } else {
-      setIsLoading(false); // Hide loading animation
+    try {
+      // Firebase sign in method
+      await auth.signInWithEmailAndPassword(email, password);
+
+      setIsLoading(false);
+      navigate("/dashboard"); // Redirect upon successful login
+    } catch (error) {
+      setIsLoading(false);
       setError("Invalid email or password. Please try again.");
+      console.error("Error signing in:", error);
     }
   };
 
@@ -110,7 +110,7 @@ const Login = () => {
           <button
             type="submit"
             className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600 relative"
-            disabled={isLoading} // Disable button during loading
+            disabled={isLoading}
           >
             {isLoading && <div className="loading-spinner"></div>}
             {isLoading ? "Signing in..." : "Sign In"}
