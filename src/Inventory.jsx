@@ -237,7 +237,7 @@ const Inventory = () => {
                             onClick={handleUpdateItem}
                             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                           >
-                            <FaCheck className="mr-1" /> Update
+                            <FaCheck className="mr-0" />
                           </button>
                           <button
                             onClick={() => {
@@ -252,7 +252,7 @@ const Inventory = () => {
                             }}
                             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                           >
-                            <FaTimes className="mr-1" /> Cancel
+                            <FaTimes className="mr-0" />
                           </button>
                         </div>
                       ) : (
