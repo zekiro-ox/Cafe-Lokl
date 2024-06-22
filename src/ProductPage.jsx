@@ -116,7 +116,7 @@ const ProductPage = () => {
               onClick={() => setFormVisible(!isFormVisible)}
               className="flex items-center px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600 md:px-6 md:py-3 md:text-lg"
             >
-              <FaPlus className="mr-2" />{" "}
+              <FaPlus className="mr-2" />
               {isFormVisible ? "Cancel" : "Add Product"}
             </button>
           </div>

@@ -104,13 +104,13 @@ const Inventory = () => {
           </div>
         </div>
         {isFormVisible && (
-          <div className="flex space-x-4">
+          <div className="flex flex-wrap space-y-4 md:space-x-4 md:space-y-0">
             <input
               type="text"
               placeholder="Name"
               value={newItem.name}
               onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 flex-1"
+              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
             />
             <input
               type="text"
@@ -119,7 +119,7 @@ const Inventory = () => {
               onChange={(e) =>
                 setNewItem({ ...newItem, productId: e.target.value })
               }
-              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 flex-1"
+              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
             />
             <input
               type="number"
@@ -128,11 +128,11 @@ const Inventory = () => {
               onChange={(e) =>
                 setNewItem({ ...newItem, onHand: parseInt(e.target.value) })
               }
-              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 flex-1"
+              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
             />
             <button
               onClick={handleAddItem}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 w-full md:w-auto"
             >
               Add
             </button>
@@ -237,7 +237,7 @@ const Inventory = () => {
                             onClick={handleUpdateItem}
                             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                           >
-                            <FaCheck className="mr-0" />
+                            <FaCheck className="mr-1" /> Update
                           </button>
                           <button
                             onClick={() => {
@@ -252,7 +252,7 @@ const Inventory = () => {
                             }}
                             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                           >
-                            <FaTimes className="mr-0" />
+                            <FaTimes className="mr-1" /> Cancel
                           </button>
                         </div>
                       ) : (
