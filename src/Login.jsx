@@ -4,6 +4,7 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
 import "./Login.css";
 import { auth } from "./config/firebase"; // Import Firebase authentication
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const Login = () => {
 
     try {
       // Firebase sign in method
-      await auth.signInWithEmailAndPassword(email, password);
+      await signInWithEmailAndPassword(auth, email, password);
 
       setIsLoading(false);
       navigate("/dashboard"); // Redirect upon successful login
