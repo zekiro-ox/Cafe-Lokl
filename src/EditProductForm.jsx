@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
-  const [name, setName] = useState(product.name);
+  const [name, setName] = useState(product.name || "");
   const [categoryOptions] = useState([
     "Hot Drinks",
     "Ice Blended",
@@ -9,17 +9,18 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
     "Tea",
     "Mocktails",
   ]);
-  const [category, setCategory] = useState(product.category);
-  const [subCategory, setSubCategory] = useState(product.subCategory);
-  const [price, setPrice] = useState(product.price);
-  const [image, setImage] = useState(product.image);
+  const [category, setCategory] = useState(product.category || "");
+  const [subCategory, setSubCategory] = useState(product.subCategory || "");
+  const [price, setPrice] = useState(product.price || "");
+  const [image, setImage] = useState(product.image || "");
+  const [imagePreview, setImagePreview] = useState(product.image || "");
   const [selectedFile, setSelectedFile] = useState(null);
   const [ingredients, setIngredients] = useState(product.ingredients || [""]);
-  const [showRemoveButtons, setShowRemoveButtons] = useState(false); // State to track when to show remove buttons
 
   useEffect(() => {
     setIngredients(product.ingredients || [""]);
-    setImage(product.image);
+    setImage(product.image || "");
+    setImagePreview(product.image || "");
   }, [product]);
 
   const handleIngredientChange = (index, value) => {
@@ -28,47 +29,54 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
     setIngredients(newIngredients);
   };
 
-  const addIngredientField = () => {
+  const handleAddIngredient = () => {
     setIngredients([...ingredients, ""]);
-    setShowRemoveButtons(true); // Show remove buttons after adding at least one ingredient
   };
 
-  const removeIngredientField = (index) => {
-    const newIngredients = [...ingredients];
-    newIngredients.splice(index, 1);
-    setIngredients(newIngredients);
+  const handleRemoveIngredient = (index) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImage(reader.result);
-    };
     if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Debug: Log the updatedProduct object
+    console.log("Submitting Product:", {
+      name,
+      category,
+      subCategory,
+      price,
+      image: selectedFile ? URL.createObjectURL(selectedFile) : image,
+      ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
+    });
+
     const updatedProduct = {
       ...product,
       name,
       category,
       subCategory,
       price,
-      image,
+      image: selectedFile ? URL.createObjectURL(selectedFile) : image,
       ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
     };
+
     onUpdateProduct(updatedProduct);
   };
 
   const handleCategoryChange = (e) => {
-    const selectedCategory = e.target.value;
-    setCategory(selectedCategory);
-    setSubCategory(""); // Reset subCategory when category changes
+    setCategory(e.target.value);
+    setSubCategory(""); // Clear subCategory when category changes
   };
 
   const handleSubCategoryChange = (e) => {
@@ -80,87 +88,86 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       onSubmit={handleSubmit}
       className="p-6 bg-white shadow-lg rounded-lg mt-6"
     >
-      <h2 className="text-2xl font-bold text-brown-500 mb-4">Edit Product</h2>
+      <h2 className="text-2xl font-bold mb-4">Edit Product</h2>
       <div className="mb-4">
-        <label className="block text-gray-700">Name</label>
+        <label className="block text-gray-700 mb-2">Product Name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full p-2 border rounded-lg"
           required
+          className="w-full p-2 border rounded-lg"
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Category</label>
+        <label className="block text-gray-700 mb-2">Category</label>
         <select
           value={category}
           onChange={handleCategoryChange}
-          className="w-full p-2 border rounded-lg"
           required
+          className="w-full p-2 border rounded-lg"
         >
-          <option value="">Select Category</option>
-          {categoryOptions.map((option, index) => (
-            <option key={index} value={option}>
+          <option value="">Select a category</option>
+          {categoryOptions.map((option) => (
+            <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Sub Category</label>
+        <label className="block text-gray-700 mb-2">Sub Category</label>
         <input
           type="text"
           value={subCategory}
-          onChange={(e) => setSubCategory(e.target.value)}
-          className="w-full p-2 border rounded-lg"
-          placeholder="Enter Sub Category"
+          onChange={handleSubCategoryChange}
           required
+          className="w-full p-2 border rounded-lg"
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Price</label>
+        <label className="block text-gray-700 mb-2">Price</label>
         <input
-          type="text"
+          type="number"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="w-full p-2 border rounded-lg"
           required
+          className="w-full p-2 border rounded-lg"
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Image</label>
+        <label className="block text-gray-700 mb-2">Image</label>
         <input
           type="file"
           onChange={handleFileChange}
+          accept="image/*"
           className="w-full p-2 border rounded-lg"
         />
-        {image && (
+        {imagePreview && (
           <div className="mt-4">
             <img
-              src={image}
+              src={imagePreview}
               alt="Product Preview"
-              className="w-48 h-48 object-cover mt-2"
+              className="w-50 h-24 object-contain border rounded-lg"
             />
           </div>
         )}
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Ingredients</label>
+        <label className="block text-gray-700 mb-2">Ingredients</label>
         {ingredients.map((ingredient, index) => (
           <div key={index} className="flex items-center mb-2">
             <input
               type="text"
               value={ingredient}
               onChange={(e) => handleIngredientChange(index, e.target.value)}
-              className="w-full p-2 border rounded-lg mr-2"
-              placeholder="Ingredient"
+              className="w-full p-2 border rounded-lg"
             />
-            {showRemoveButtons && index > 0 && (
+            {ingredients.length > 1 && (
               <button
                 type="button"
-                onClick={() => removeIngredientField(index)}
-                className="px-2 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                onClick={() => handleRemoveIngredient(index)}
+                className="ml-2 p-2 bg-red-500 text-white rounded-lg"
               >
                 Remove
               </button>
@@ -169,8 +176,8 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
         ))}
         <button
           type="button"
-          onClick={addIngredientField}
-          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+          onClick={handleAddIngredient}
+          className="mt-2 p-2 bg-blue-500 text-white rounded-lg"
         >
           Add Ingredient
         </button>
@@ -185,7 +192,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
         >
           Update Product
         </button>

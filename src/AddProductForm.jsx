@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { collection, addDoc, db } from "./config/firebase"; // Ensure the path is correct
 
 const AddProductForm = ({ onAddProduct }) => {
   const [name, setName] = useState("");
@@ -8,42 +9,48 @@ const AddProductForm = ({ onAddProduct }) => {
     "Non Coffee",
     "Tea",
     "Mocktails",
-  ]); // Example categories for coffee products
+  ]);
   const [category, setCategory] = useState("");
-  const [subCategoryOptions] = useState({
-    "Hot Drinks": ["Espresso", "Cappuccino", "Latte", "Macchiato"],
-    "Ice Blended": ["Frappuccino", "Iced Latte", "Smoothie"],
-    "Non Coffee": ["Hot Chocolate", "Tea Latte", "Chai Latte"],
-    Tea: ["Black Tea", "Green Tea", "Herbal Tea"],
-    Mocktails: ["Mango Tango", "Berry Bliss", "Tropical Sunset"],
-  });
   const [subCategory, setSubCategory] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(""); // State for image preview
   const [ingredients, setIngredients] = useState([""]);
-  const [showRemoveButtons, setShowRemoveButtons] = useState(false); // State to track when to show remove buttons
+  const [showRemoveButtons, setShowRemoveButtons] = useState(false);
 
-  const handleIngredientChange = (index, value) => {
+  const handleCategoryChange = (e) => {
+    setCategory(e.target.value);
+    setSubCategory(""); // Clear subCategory when category changes
+  };
+
+  const handleSubCategoryChange = (e) => {
+    setSubCategory(e.target.value);
+  };
+
+  const handleIngredientChange = (index, event) => {
     const newIngredients = [...ingredients];
-    newIngredients[index] = value;
+    newIngredients[index] = event.target.value;
     setIngredients(newIngredients);
   };
 
-  const addIngredientField = () => {
+  const handleAddIngredient = () => {
     setIngredients([...ingredients, ""]);
-    setShowRemoveButtons(true); // Show remove buttons after adding at least one ingredient
   };
 
-  const removeIngredientField = (index) => {
-    const newIngredients = [...ingredients];
-    newIngredients.splice(index, 1);
-    setIngredients(newIngredients);
+  const handleRemoveIngredient = (index) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file)); // Set image preview URL
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newProduct = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name,
       category,
       subCategory,
@@ -52,114 +59,105 @@ const AddProductForm = ({ onAddProduct }) => {
       image: image ? URL.createObjectURL(image) : "",
       ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
     };
-    onAddProduct(newProduct);
-    setName("");
-    setCategory("");
-    setSubCategory("");
-    setPrice("");
-    setImage(null);
-    setIngredients([""]);
-    setShowRemoveButtons(false); // Reset to hide remove buttons after submission
-  };
 
-  const handleCategoryChange = (e) => {
-    const selectedCategory = e.target.value;
-    setCategory(selectedCategory);
-    setSubCategory(""); // Reset subCategory when category changes
-  };
-
-  const handleSubCategoryChange = (e) => {
-    setSubCategory(e.target.value);
+    try {
+      await addDoc(collection(db, "products"), newProduct);
+      onAddProduct(newProduct); // Notify ProductPage to update its state
+      setName("");
+      setCategory("");
+      setSubCategory("");
+      setPrice("");
+      setImage(null);
+      setImagePreview(""); // Clear image preview
+      setIngredients([""]);
+      setShowRemoveButtons(false);
+    } catch (error) {
+      console.error("Error adding product: ", error);
+    }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-6 bg-white shadow-lg rounded-lg mt-6"
-    >
-      <h2 className="text-2xl font-bold text-brown-500 mb-4">Add Product</h2>
+    <form onSubmit={handleSubmit} className="p-6 bg-white shadow-lg rounded-lg">
+      <h2 className="text-2xl font-bold mb-4">Add New Product</h2>
       <div className="mb-4">
-        <label className="block text-gray-700">Name</label>
+        <label className="block text-gray-700 mb-2">Product Name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full p-2 border rounded-lg"
           required
+          className="w-full p-2 border rounded-lg"
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Category</label>
+        <label className="block text-gray-700 mb-2">Category</label>
         <select
           value={category}
           onChange={handleCategoryChange}
-          className="w-full p-2 border rounded-lg"
           required
+          className="w-full p-2 border rounded-lg"
         >
-          <option value="">Select Category</option>
-          {categoryOptions.map((option, index) => (
-            <option key={index} value={option}>
+          <option value="">Select a category</option>
+          {categoryOptions.map((option) => (
+            <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
       </div>
-      {category && (
-        <div className="mb-4">
-          <label className="block text-gray-700">Sub Category</label>
-          <input
-            type="text"
-            value={subCategory}
-            onChange={handleSubCategoryChange}
-            className="w-full p-2 border rounded-lg"
-            placeholder="Enter Sub Category"
-            required
-          />
-        </div>
-      )}
       <div className="mb-4">
-        <label className="block text-gray-700">Price</label>
+        <label className="block text-gray-700 mb-2">Sub Category</label>
         <input
           type="text"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="w-full p-2 border rounded-lg"
+          value={subCategory}
+          onChange={handleSubCategoryChange}
           required
+          className="w-full p-2 border rounded-lg"
         />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Image</label>
+        <label className="block text-gray-700 mb-2">Price</label>
         <input
-          type="file"
-          onChange={(e) => setImage(e.target.files[0])}
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          required
           className="w-full p-2 border rounded-lg"
         />
-        {image && (
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 mb-2">Image</label>
+        <input
+          type="file"
+          onChange={handleImageChange}
+          accept="image/*"
+          className="w-full p-2 border rounded-lg"
+        />
+        {imagePreview && (
           <div className="mt-4">
             <img
-              src={URL.createObjectURL(image)}
-              alt="Product Preview"
-              className="w-48 h-48 object-cover mt-2"
+              src={imagePreview}
+              alt="Preview"
+              className="w-50 h-24 object-contain border rounded-lg"
             />
           </div>
         )}
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700">Ingredients</label>
+        <label className="block text-gray-700 mb-2">Ingredients</label>
         {ingredients.map((ingredient, index) => (
           <div key={index} className="flex items-center mb-2">
             <input
               type="text"
               value={ingredient}
-              onChange={(e) => handleIngredientChange(index, e.target.value)}
-              className="w-full p-2 border rounded-lg mr-2"
-              placeholder="Ingredient"
+              onChange={(event) => handleIngredientChange(index, event)}
+              className="w-full p-2 border rounded-lg"
             />
-            {showRemoveButtons && (
+            {ingredients.length > 1 && (
               <button
                 type="button"
-                onClick={() => removeIngredientField(index)}
-                className="px-2 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                onClick={() => handleRemoveIngredient(index)}
+                className="ml-2 p-2 bg-red-500 text-white rounded-lg"
               >
                 Remove
               </button>
@@ -168,16 +166,16 @@ const AddProductForm = ({ onAddProduct }) => {
         ))}
         <button
           type="button"
-          onClick={addIngredientField}
-          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+          onClick={handleAddIngredient}
+          className="mt-2 p-2 bg-blue-500 text-white rounded-lg"
         >
           Add Ingredient
         </button>
       </div>
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end">
         <button
           type="submit"
-          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+          className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
         >
           Add Product
         </button>

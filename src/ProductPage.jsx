@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FaPlus,
   FaSearch,
@@ -6,58 +6,71 @@ import {
   FaToggleOff,
   FaEdit,
   FaTrash,
+  FaEye,
 } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
+import {
+  db,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  deleteDoc, // Import deleteDoc
+  doc, // Import doc
+} from "./config/firebase";
 
 const ProductPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Product 1",
-      category: "Category 1",
-      subCategory: "Sub Category 1",
-      price: "10",
-      available: true,
-      image:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
-      ingredients: ["Ingredient 1", "Ingredient 2"],
-    },
-    {
-      id: 2,
-      name: "Product 2",
-      category: "Category 2",
-      subCategory: "Sub Category 2",
-      price: "20",
-      available: true,
-      image:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
-      ingredients: ["Ingredient 3", "Ingredient 4"],
-    },
-    {
-      id: 3,
-      name: "Product 3",
-      category: "Category 3",
-      subCategory: "Sub Category 3",
-      price: "30",
-      available: true,
-      image:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Cappuccino_at_Sightglass_Coffee.jpg/640px-Cappuccino_at_Sightglass_Coffee.jpg",
-      ingredients: ["Ingredient 5", "Ingredient 6"],
-    },
-  ]);
+  const [products, setProducts] = useState([]);
   const [isFormVisible, setFormVisible] = useState(false);
   const [isEditVisible, setEditVisible] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const q = query(collection(db, "products"), orderBy("id", "asc"));
+      const querySnapshot = await getDocs(q);
+      const productsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProducts(productsData);
+    };
+
+    fetchProducts();
+  }, []);
+
+  const generateProductId = async () => {
+    const q = query(
+      collection(db, "products"),
+      orderBy("id", "desc"),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      return "000001";
+    } else {
+      const lastProductId = querySnapshot.docs[0].data().id;
+      const newId = (parseInt(lastProductId) + 1).toString().padStart(6, "0");
+      return newId;
+    }
+  };
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
   };
 
-  const handleAddProduct = (newProduct) => {
-    setProducts((prevProducts) => [...prevProducts, newProduct]);
+  const handleAddProduct = async (newProduct) => {
+    const newProductId = await generateProductId();
+    const productWithId = { ...newProduct, id: newProductId };
+
+    await addDoc(collection(db, "products"), productWithId);
+    setProducts((prevProducts) => [...prevProducts, productWithId]);
     setFormVisible(false);
   };
 
@@ -86,10 +99,21 @@ const ProductPage = () => {
     setEditProduct(null);
   };
 
-  const handleDeleteProduct = (id) => {
-    setProducts((prevProducts) =>
-      prevProducts.filter((product) => product.id !== id)
-    );
+  const handleDeleteProduct = async (id) => {
+    try {
+      // Delete the document from Firestore
+      await deleteDoc(doc(db, "products", id));
+      // Remove the product from the state
+      setProducts((prevProducts) =>
+        prevProducts.filter((product) => product.id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting product: ", error);
+    }
+  };
+
+  const handleViewDescription = (product) => {
+    setViewProduct(product);
   };
 
   const filteredProducts = products.filter((product) =>
@@ -156,32 +180,37 @@ const ProductPage = () => {
                   <td className="py-3 px-4 text-center">
                     <button
                       onClick={() => toggleAvailability(product.id)}
-                      className={`flex items-center px-4 py-2 rounded-lg ${
+                      className={`flex items-center px-4 py-2 rounded-2xl ${
                         product.available
                           ? "bg-green-500 hover:bg-green-600"
                           : "bg-red-500 hover:bg-red-600"
                       } text-white`}
                     >
                       {product.available ? (
-                        <FaToggleOn className="mr-2" />
+                        <FaToggleOn className="mr-2 ml-2" />
                       ) : (
-                        <FaToggleOff className="mr-2" />
+                        <FaToggleOff className="mr-2 ml-2" />
                       )}
-                      {product.available ? "Available" : "Not Available"}
                     </button>
                   </td>
-                  <td className="flex items-center  py-3 px-4 text-center space-x-2">
+                  <td className="flex items-center py-3 px-4 text-center space-x-2">
+                    <button
+                      onClick={() => handleViewDescription(product)}
+                      className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600"
+                    >
+                      <FaEye />
+                    </button>
                     <button
                       onClick={() => handleEditProduct(product)}
-                      className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 md:mr-2"
+                      className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-2xl hover:bg-blue-600"
                     >
-                      <FaEdit className="mr-2" /> Edit
+                      <FaEdit />
                     </button>
                     <button
                       onClick={() => handleDeleteProduct(product.id)}
-                      className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 md:mr-2"
+                      className="flex items-center px-4 py-2 bg-red-500 text-white rounded-2xl hover:bg-red-600"
                     >
-                      <FaTrash className="mr-2" /> Delete
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>
@@ -189,6 +218,18 @@ const ProductPage = () => {
             </tbody>
           </table>
         </div>
+        {viewProduct && (
+          <div className="mt-6 p-4 bg-gray-200 rounded-lg">
+            <h2 className="text-xl font-bold mb-4">Product Description</h2>
+            <p>{viewProduct.description}</p>
+            <button
+              onClick={() => setViewProduct(null)}
+              className="mt-4 px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
