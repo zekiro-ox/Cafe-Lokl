@@ -18,10 +18,11 @@ import {
   getDocs,
   query,
   orderBy,
-  limit,
-  deleteDoc, // Import deleteDoc
-  doc, // Import doc
+  deleteDoc,
+  doc,
+  updateDoc,
 } from "./config/firebase";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const ProductPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,10 +34,10 @@ const ProductPage = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const q = query(collection(db, "products"), orderBy("id", "asc"));
+      const q = query(collection(db, "products"), orderBy("name", "asc"));
       const querySnapshot = await getDocs(q);
       const productsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
+        id: doc.id, // Use Firestore document ID
         ...doc.data(),
       }));
       setProducts(productsData);
@@ -45,43 +46,54 @@ const ProductPage = () => {
     fetchProducts();
   }, []);
 
-  const generateProductId = async () => {
-    const q = query(
-      collection(db, "products"),
-      orderBy("id", "desc"),
-      limit(1)
-    );
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) {
-      return "000001";
-    } else {
-      const lastProductId = querySnapshot.docs[0].data().id;
-      const newId = (parseInt(lastProductId) + 1).toString().padStart(6, "0");
-      return newId;
-    }
-  };
-
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
   };
 
   const handleAddProduct = async (newProduct) => {
-    const newProductId = await generateProductId();
-    const productWithId = { ...newProduct, id: newProductId };
+    let imageUrl = "";
+    if (newProduct.image) {
+      const storage = getStorage();
+      const storageRef = ref(storage, `products/${newProduct.image.name}`);
+      await uploadBytes(storageRef, newProduct.image);
+      imageUrl = await getDownloadURL(storageRef);
+    }
 
-    await addDoc(collection(db, "products"), productWithId);
-    setProducts((prevProducts) => [...prevProducts, productWithId]);
+    const newProductData = { ...newProduct, image: imageUrl };
+
+    const docRef = await addDoc(collection(db, "products"), newProductData);
+    const newProductWithId = { ...newProductData, id: docRef.id }; // Add Firestore document ID
+
+    setProducts((prevProducts) => [...prevProducts, newProductWithId]);
     setFormVisible(false);
   };
 
-  const toggleAvailability = (id) => {
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product.id === id
-          ? { ...product, available: !product.available }
-          : product
-      )
-    );
+  const toggleAvailability = async (id) => {
+    // Find the product to toggle
+    const product = products.find((product) => product.id === id);
+
+    if (product) {
+      // Toggle the availability status
+      const updatedProduct = { ...product, available: !product.available };
+
+      try {
+        // Reference to the Firestore document
+        const productDocRef = doc(db, "products", id);
+
+        // Update the document in Firestore
+        await updateDoc(productDocRef, { available: updatedProduct.available });
+
+        // Update the local state
+        setProducts((prevProducts) =>
+          prevProducts.map((product) =>
+            product.id === id ? updatedProduct : product
+          )
+        );
+      } catch (error) {
+        console.error("Error updating document: ", error);
+        alert("Failed to update availability. Please try again.");
+      }
+    }
   };
 
   const handleEditProduct = (product) => {
@@ -89,10 +101,25 @@ const ProductPage = () => {
     setEditVisible(true);
   };
 
-  const handleUpdateProduct = (updatedProduct) => {
+  const handleUpdateProduct = async (updatedProduct) => {
+    let imageUrl = updatedProduct.image;
+    if (updatedProduct.selectedFile) {
+      const storage = getStorage();
+      const storageRef = ref(
+        storage,
+        `products/${updatedProduct.selectedFile.name}`
+      );
+      await uploadBytes(storageRef, updatedProduct.selectedFile);
+      imageUrl = await getDownloadURL(storageRef);
+    }
+
+    const updatedProductData = { ...updatedProduct, image: imageUrl };
+    const productDocRef = doc(db, "products", updatedProduct.id); // Use Firestore document ID
+    await updateDoc(productDocRef, updatedProductData);
+
     setProducts((prevProducts) =>
       prevProducts.map((product) =>
-        product.id === updatedProduct.id ? updatedProduct : product
+        product.id === updatedProduct.id ? updatedProductData : product
       )
     );
     setEditVisible(false);
@@ -100,19 +127,20 @@ const ProductPage = () => {
   };
 
   const handleDeleteProduct = async (id) => {
-    try {
-      // Delete the document from Firestore
-      await deleteDoc(doc(db, "products", id));
-      // Remove the product from the state
-      setProducts((prevProducts) =>
-        prevProducts.filter((product) => product.id !== id)
-      );
-    } catch (error) {
-      console.error("Error deleting product: ", error);
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      try {
+        await deleteDoc(doc(db, "products", id));
+        setProducts((prevProducts) =>
+          prevProducts.filter((product) => product.id !== id)
+        );
+      } catch (error) {
+        console.error("Error deleting product: ", error);
+        alert("Failed to delete the product. Please try again.");
+      }
     }
   };
 
-  const handleViewDescription = (product) => {
+  const handleViewProduct = (product) => {
     setViewProduct(product);
   };
 
@@ -178,40 +206,31 @@ const ProductPage = () => {
                     {product.price}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => toggleAvailability(product.id)}
-                      className={`flex items-center px-4 py-2 rounded-2xl ${
-                        product.available
-                          ? "bg-green-500 hover:bg-green-600"
-                          : "bg-red-500 hover:bg-red-600"
-                      } text-white`}
-                    >
-                      {product.available ? (
-                        <FaToggleOn className="mr-2 ml-2" />
-                      ) : (
-                        <FaToggleOff className="mr-2 ml-2" />
-                      )}
-                    </button>
+                    {product.available ? (
+                      <FaToggleOn
+                        onClick={() => toggleAvailability(product.id)}
+                        className="text-green-500 cursor-pointer hover:text-green-600"
+                      />
+                    ) : (
+                      <FaToggleOff
+                        onClick={() => toggleAvailability(product.id)}
+                        className="text-red-500 cursor-pointer hover:text-red-600"
+                      />
+                    )}
                   </td>
                   <td className="flex items-center py-3 px-4 text-center space-x-2">
-                    <button
-                      onClick={() => handleViewDescription(product)}
-                      className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-2xl hover:bg-yellow-600"
-                    >
-                      <FaEye />
-                    </button>
-                    <button
+                    <FaEye
+                      onClick={() => handleViewProduct(product)}
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                    />
+                    <FaEdit
                       onClick={() => handleEditProduct(product)}
-                      className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-2xl hover:bg-blue-600"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
+                      className="text-blue-500 cursor-pointer hover:text-blue-600"
+                    />
+                    <FaTrash
                       onClick={() => handleDeleteProduct(product.id)}
-                      className="flex items-center px-4 py-2 bg-red-500 text-white rounded-2xl hover:bg-red-600"
-                    >
-                      <FaTrash />
-                    </button>
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                    />
                   </td>
                 </tr>
               ))}
@@ -219,15 +238,36 @@ const ProductPage = () => {
           </table>
         </div>
         {viewProduct && (
-          <div className="mt-6 p-4 bg-gray-200 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Product Description</h2>
-            <p>{viewProduct.description}</p>
-            <button
-              onClick={() => setViewProduct(null)}
-              className="mt-4 px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
-            >
-              Close
-            </button>
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+              <h3 className="text-xl font-semibold mb-4">{viewProduct.name}</h3>
+              {viewProduct.image && (
+                <img
+                  src={viewProduct.image}
+                  alt={viewProduct.name}
+                  className="w-full h-auto mb-4"
+                />
+              )}
+              <p>
+                <strong>Category:</strong> {viewProduct.category}
+              </p>
+              <p>
+                <strong>Sub Category:</strong> {viewProduct.subCategory}
+              </p>
+              <p>
+                <strong>Price:</strong> {"P "} {viewProduct.price}
+              </p>
+              <p>
+                <strong>Ingredients:</strong>{" "}
+                {viewProduct.ingredients.join(", ")}
+              </p>
+              <button
+                onClick={() => setViewProduct(null)}
+                className="mt-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
       </div>

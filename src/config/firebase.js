@@ -10,7 +10,9 @@ import {
   limit,
   deleteDoc,
   doc,
+  updateDoc,
 } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCZ9wcj0Fp1wWWiXuZy_-ksUHyk3tgFWzM",
@@ -25,10 +27,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
+const storage = getStorage(app);
 export {
   auth,
   db,
+  storage,
   collection,
   addDoc,
   getDocs,
@@ -37,4 +40,5 @@ export {
   limit,
   deleteDoc,
   doc,
+  updateDoc,
 };
