@@ -250,9 +250,9 @@ const Inventory = () => {
       <Sidebar />
       <div className="flex-grow p-8 bg-gray-100 lg:ml-[250px] ml-0">
         <div className="mb-8 flex flex-col sm:flex-row items-center justify-between">
-          <div className="flex flex-wrap items-center">
+          <div className="flex flex-wrap items-center mb-4 sm:mb-0">
             <button
-              className={`flex items-center px-4 py-2 rounded-lg mr-4 mb-2 sm:mb-0 ${
+              className={`flex items-center px-4 py-2 rounded-lg mr-4 ${
                 selectedFolder === "Ingredients"
                   ? "bg-brown-500 text-white"
                   : "bg-gray-300 text-gray-600"
@@ -282,17 +282,15 @@ const Inventory = () => {
               Packaging
             </button>
           </div>
-          <div className="flex flex-col sm:flex-row items-center mt-4 sm:mt-0 w-full sm:w-auto relative">
-            <div className="relative w-full sm:w-auto">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search by name or ID"
-                className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 pl-8 w-full"
-              />
-              <FaSearch className="absolute top-1/2 left-2 transform -translate-y-1/2 text-gray-500" />
-            </div>
+          <div className="relative w-full sm:w-auto">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Search by name or ID"
+              className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 pl-8 w-full"
+            />
+            <FaSearch className="absolute top-1/2 left-2 transform -translate-y-1/2 text-gray-500" />
           </div>
         </div>
         <button
