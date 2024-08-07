@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaUpload } from "react-icons/fa";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "./config/firebase"; // Ensure the correct path
 
 const AddProductForm = ({ onAddProduct }) => {
   const [name, setName] = useState("");
@@ -8,6 +10,7 @@ const AddProductForm = ({ onAddProduct }) => {
   const [price, setPrice] = useState("");
   const [available, setAvailable] = useState(true);
   const [ingredients, setIngredients] = useState([""]);
+  const [ingredientOptions, setIngredientOptions] = useState([]);
   const [image, setImage] = useState(null);
 
   // Predefined drink categories
@@ -19,6 +22,20 @@ const AddProductForm = ({ onAddProduct }) => {
     "Juices",
     "Dessert",
   ];
+
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "Ingredients"));
+        const options = querySnapshot.docs.map((doc) => doc.data().name);
+        setIngredientOptions(options);
+      } catch (error) {
+        console.error("Error fetching ingredients: ", error);
+      }
+    };
+
+    fetchIngredients();
+  }, []);
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, ""]);
@@ -51,9 +68,12 @@ const AddProductForm = ({ onAddProduct }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 bg-white shadow-lg rounded-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto"
+    >
       <h2 className="text-xl font-semibold mb-4">Add Product</h2>
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
@@ -113,22 +133,29 @@ const AddProductForm = ({ onAddProduct }) => {
             <option value={false}>Unavailable</option>
           </select>
         </div>
-        <div>
+        <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Ingredients</label>
           {ingredients.map((ingredient, index) => (
             <div key={index} className="flex items-center mb-2">
-              <input
-                type="text"
+              <select
                 value={ingredient}
                 onChange={(e) => handleIngredientChange(index, e)}
                 className="p-2 border rounded-lg flex-1"
-                placeholder="Ingredient"
-              />
+              >
+                <option value="" disabled>
+                  Select Ingredient
+                </option>
+                {ingredientOptions.map((option, idx) => (
+                  <option key={idx} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
               {index === ingredients.length - 1 && (
                 <button
                   type="button"
                   onClick={handleAddIngredient}
-                  className="ml-2 text-brown-500 hover:underline"
+                  className="ml-2 px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
                 >
                   Add Ingredient
                 </button>
@@ -148,7 +175,7 @@ const AddProductForm = ({ onAddProduct }) => {
       </div>
       <button
         type="submit"
-        className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+        className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600 mt-4"
       >
         Add Product
       </button>

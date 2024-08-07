@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
 import { storage, db } from "./config/firebase"; // Adjust path as necessary
 
 const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
@@ -10,6 +10,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   const [price, setPrice] = useState(product.price || "");
   const [available, setAvailable] = useState(product.available || true);
   const [ingredients, setIngredients] = useState(product.ingredients || []);
+  const [ingredientOptions, setIngredientOptions] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
   // Predefined drink categories
@@ -21,6 +22,20 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
     "Juices",
     "Dessert",
   ];
+
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "Ingredients"));
+        const options = querySnapshot.docs.map((doc) => doc.data().name);
+        setIngredientOptions(options);
+      } catch (error) {
+        console.error("Error fetching ingredients: ", error);
+      }
+    };
+
+    fetchIngredients();
+  }, []);
 
   useEffect(() => {
     if (product) {
@@ -87,9 +102,12 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 bg-white shadow-lg rounded-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto"
+    >
       <h2 className="text-xl font-semibold mb-4">Edit Product</h2>
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
@@ -149,22 +167,29 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
             <option value={false}>Unavailable</option>
           </select>
         </div>
-        <div>
+        <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Ingredients</label>
           {ingredients.map((ingredient, index) => (
             <div key={index} className="flex items-center mb-2">
-              <input
-                type="text"
+              <select
                 value={ingredient}
                 onChange={(e) => handleIngredientChange(index, e)}
                 className="p-2 border rounded-lg flex-1"
-                placeholder="Ingredient"
-              />
+              >
+                <option value="" disabled>
+                  Select Ingredient
+                </option>
+                {ingredientOptions.map((option, idx) => (
+                  <option key={idx} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
               {index === ingredients.length - 1 && (
                 <button
                   type="button"
                   onClick={handleAddIngredient}
-                  className="ml-2 text-brown-500 hover:underline"
+                  className="ml-2 px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
                 >
                   Add Ingredient
                 </button>
@@ -185,19 +210,21 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
           )}
         </div>
       </div>
-      <button
-        type="submit"
-        className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
-      >
-        Update Product
-      </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        className="ml-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-      >
-        Cancel
-      </button>
+      <div className="flex gap-4 mt-4">
+        <button
+          type="submit"
+          className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+        >
+          Update Product
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 };
