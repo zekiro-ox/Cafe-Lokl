@@ -75,6 +75,7 @@ const EmployeeLog = () => {
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
         <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Employee Logs</h2>
           <div className="flex items-center space-x-4">
             <div className="relative flex-1">
               <input

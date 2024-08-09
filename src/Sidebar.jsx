@@ -9,6 +9,7 @@ import {
   FaWarehouse,
   FaSignOutAlt,
   FaUserShield,
+  FaUserTie, // Import the icon for Employee Account
 } from "react-icons/fa";
 import { MdDashboard } from "react-icons/md";
 import logo from "./assets/logo.png"; // Update the path as necessary
@@ -141,6 +142,23 @@ const Sidebar = () => {
               >
                 <FaWarehouse className="flex-shrink-0 w-5 h-5 transition duration-75" />
                 <span className="flex-1 ms-3 whitespace-nowrap">Inventory</span>
+              </Link>
+            </li>
+            {/* New Employee Account Link */}
+            <li>
+              <Link
+                to="/employee-account"
+                className={`flex items-center p-4 rounded ${
+                  activeLink === "/employee-account"
+                    ? "bg-gray-200 text-black"
+                    : "text-white hover:bg-gray-200 hover:text-black"
+                }`}
+                onClick={() => handleLinkClick("/employee-account")}
+              >
+                <FaUserTie className="flex-shrink-0 w-5 h-5 transition duration-75" />
+                <span className="flex-1 ms-3 whitespace-nowrap">
+                  Employee Account
+                </span>
               </Link>
             </li>
             <li>

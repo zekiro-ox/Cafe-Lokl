@@ -6,6 +6,7 @@ import ProductPage from "./ProductPage";
 import EmployeeLog from "./EmployeeLogs";
 import SalesReport from "./SalesReport";
 import Inventory from "./Inventory";
+import EmployeeAccount from "./EmployeeAccount";
 
 // Generate more dummy data for the past 60 days
 const salesData = Array.from({ length: 150 }, (_, i) => {
@@ -31,6 +32,7 @@ function App() {
           element={<SalesReport salesData={salesData} />}
         />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/employee-account" element={<EmployeeAccount />} />
       </Routes>
     </Router>
   );
