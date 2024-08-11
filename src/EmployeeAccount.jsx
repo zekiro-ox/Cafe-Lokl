@@ -1,30 +1,26 @@
-import React, { useState } from "react";
-import { FaPlus, FaSearch, FaEdit, FaTrash } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import {
+  FaPlus,
+  FaSearch,
+  FaEdit,
+  FaTrash,
+  FaEye,
+  FaEyeSlash,
+} from "react-icons/fa";
 import Sidebar from "./Sidebar";
+import { db } from "./config/firebase"; // Ensure this path is correct for your project setup
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 const EmployeeAccount = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [employees, setEmployees] = useState([
-    {
-      id: "E001",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      position: "Manager",
-    },
-    {
-      id: "E002",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      position: "Barista",
-    },
-    {
-      id: "E003",
-      name: "Alice Johnson",
-      email: "alice.johnson@example.com",
-      position: "Cashier",
-    },
-  ]);
-
+  const [employees, setEmployees] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
@@ -37,6 +33,24 @@ const EmployeeAccount = () => {
   });
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [passwordError, setPasswordError] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
+  const employeesCollectionRef = collection(db, "accounts");
+
+  // Fetch employees from Firestore on component mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const data = await getDocs(employeesCollectionRef);
+      setEmployees(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -49,64 +63,104 @@ const EmployeeAccount = () => {
     });
   };
 
-  const handleAddEmployee = () => {
+  const handleAddEmployee = async () => {
     if (newEmployee.password !== newEmployee.confirmPassword) {
       setPasswordError("Passwords do not match.");
       return;
     }
 
     const fullName = `${newEmployee.firstName} ${newEmployee.lastName}`;
-    const newId = `E${(employees.length + 1).toString().padStart(3, "0")}`;
 
-    setEmployees([
-      ...employees,
-      {
-        id: newId,
-        name: fullName,
-        email: newEmployee.email,
-        position: newEmployee.position,
-      },
-    ]);
+    const newEmployeeData = {
+      name: fullName,
+      email: newEmployee.email,
+      position: newEmployee.position,
+      password: newEmployee.password,
+    };
 
-    setShowAddForm(false);
-    setNewEmployee({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      position: "",
-    });
-    setPasswordError("");
+    try {
+      const docRef = await addDoc(employeesCollectionRef, newEmployeeData);
+      setEmployees([...employees, { ...newEmployeeData, id: docRef.id }]);
+      setShowAddForm(false);
+      setNewEmployee({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        position: "",
+      });
+      setPasswordError("");
+    } catch (error) {
+      console.error("Error adding employee: ", error);
+    }
   };
 
-  const handleEditEmployee = () => {
-    const updatedEmployees = employees.map((employee) =>
-      employee.id === selectedEmployee.id
-        ? { ...employee, ...selectedEmployee }
-        : employee
+  const handleEditEmployee = async () => {
+    if (newPassword && newPassword !== confirmNewPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    try {
+      const employeeDoc = doc(db, "accounts", selectedEmployee.id);
+      const updatedEmployeeData = {
+        name: `${selectedEmployee.firstName} ${selectedEmployee.lastName}`,
+        email: selectedEmployee.email,
+        position: selectedEmployee.position,
+      };
+
+      // Update the password only if a new one is provided
+      if (newPassword) {
+        updatedEmployeeData.password = newPassword;
+      }
+
+      await updateDoc(employeeDoc, updatedEmployeeData);
+
+      const updatedEmployees = employees.map((employee) =>
+        employee.id === selectedEmployee.id
+          ? { ...employee, ...updatedEmployeeData }
+          : employee
+      );
+      setEmployees(updatedEmployees);
+      setShowEditForm(false);
+      setSelectedEmployee(null);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setPasswordError("");
+    } catch (error) {
+      console.error("Error editing employee: ", error);
+    }
+  };
+
+  const handleDelete = async (employee) => {
+    try {
+      const employeeDoc = doc(db, "accounts", employee.id);
+      await deleteDoc(employeeDoc);
+      setEmployees(employees.filter((e) => e.id !== employee.id));
+    } catch (error) {
+      console.error("Error deleting employee: ", error);
+    }
+  };
+
+  const filteredEmployees = employees.filter((employee) => {
+    const id = employee.id || ""; // Fallback to an empty string if undefined
+    const name = employee.name || "";
+    const email = employee.email || "";
+    const position = employee.position || "";
+
+    return (
+      id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      position.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setEmployees(updatedEmployees);
-    setShowEditForm(false);
-    setSelectedEmployee(null);
-  };
-
-  const filteredEmployees = employees.filter(
-    (employee) =>
-      employee.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  });
 
   const handleEdit = (employee) => {
     const [firstName, lastName] = employee.name.split(" ");
     setSelectedEmployee({ ...employee, firstName, lastName });
     setShowEditForm(true);
-  };
-
-  const handleDelete = (employee) => {
-    setEmployees(employees.filter((e) => e.id !== employee.id));
   };
 
   return (
@@ -187,7 +241,7 @@ const EmployeeAccount = () => {
                 name="firstName"
                 value={newEmployee.firstName}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
             <div className="mb-4">
@@ -199,7 +253,7 @@ const EmployeeAccount = () => {
                 name="lastName"
                 value={newEmployee.lastName}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
             <div className="mb-4">
@@ -211,36 +265,50 @@ const EmployeeAccount = () => {
                 name="email"
                 value={newEmployee.email}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
-            <div className="mb-4">
+            <div className="mb-4 relative">
               <label className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={newEmployee.password}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full pr-10"
               />
+              <button
+                type="button"
+                className="absolute inset-y-11 right-0 flex items-center px-3"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
-            <div className="mb-4">
+            <div className="mb-4 relative">
               <label className="block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={newEmployee.confirmPassword}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full pr-10"
               />
-              {passwordError && (
-                <p className="text-red-500 text-sm mt-2">{passwordError}</p>
-              )}
+              <button
+                type="button"
+                className="absolute inset-y-11 right-0 flex items-center px-3"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
+            {passwordError && (
+              <p className="text-red-500 text-sm mb-4">{passwordError}</p>
+            )}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
                 Position
@@ -249,26 +317,27 @@ const EmployeeAccount = () => {
                 name="position"
                 value={newEmployee.position}
                 onChange={handleInputChange}
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               >
-                <option value="">Select Position</option>
+                <option value="">Select a position</option>
                 <option value="Manager">Manager</option>
+                <option value="Staff">Staff</option>
                 <option value="Barista">Barista</option>
-                <option value="Cashier">Cashier</option>
+                {/* Add more positions as needed */}
               </select>
             </div>
             <div className="flex justify-end">
               <button
-                onClick={handleAddEmployee}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Add Employee
-              </button>
-              <button
                 onClick={() => setShowAddForm(false)}
-                className="ml-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleAddEmployee}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 ml-4"
+              >
+                Add Employee
               </button>
             </div>
           </div>
@@ -294,7 +363,7 @@ const EmployeeAccount = () => {
                     firstName: e.target.value,
                   })
                 }
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
             <div className="mb-4">
@@ -311,7 +380,7 @@ const EmployeeAccount = () => {
                     lastName: e.target.value,
                   })
                 }
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
             <div className="mb-4">
@@ -328,7 +397,7 @@ const EmployeeAccount = () => {
                     email: e.target.value,
                   })
                 }
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               />
             </div>
             <div className="mb-4">
@@ -344,25 +413,67 @@ const EmployeeAccount = () => {
                     position: e.target.value,
                   })
                 }
-                className="mt-1 p-2 w-full border rounded-lg"
+                className="mt-1 p-2 border rounded-lg w-full"
               >
                 <option value="Manager">Manager</option>
+                <option value="Staff">Staff</option>
                 <option value="Barista">Barista</option>
-                <option value="Cashier">Cashier</option>
+                {/* Add more positions as needed */}
               </select>
             </div>
+            <div className="mb-4 relative">
+              <label className="block text-sm font-medium text-gray-700">
+                New Password (optional)
+              </label>
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-1 p-2 border rounded-lg w-full pr-10"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-11 right-0 flex items-center px-3"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+              >
+                {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            <div className="mb-4 relative">
+              <label className="block text-sm font-medium text-gray-700">
+                Confirm New Password (optional)
+              </label>
+              <input
+                type={showConfirmNewPassword ? "text" : "password"}
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="mt-1 p-2 border rounded-lg w-full pr-10"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-11 right-0 flex items-center px-3"
+                onClick={() =>
+                  setShowConfirmNewPassword(!showConfirmNewPassword)
+                }
+              >
+                {showConfirmNewPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            {passwordError && (
+              <p className="text-red-500 text-sm mb-4">{passwordError}</p>
+            )}
             <div className="flex justify-end">
               <button
-                onClick={handleEditEmployee}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                Save Changes
-              </button>
-              <button
                 onClick={() => setShowEditForm(false)}
-                className="ml-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleEditEmployee}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 ml-4"
+              >
+                Save Changes
               </button>
             </div>
           </div>
