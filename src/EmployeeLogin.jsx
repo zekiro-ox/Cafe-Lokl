@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link from react-router-dom
+import { useNavigate, Link } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
 import "./Login.css";
-import { auth } from "./config/firebase"; // Import Firebase authentication
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { db } from "./config/firebase";
+import { getDocs, query, where, collection } from "firebase/firestore";
 
-const Login = () => {
+const EmployeeLogin = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -17,7 +17,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("rememberedEmail");
+    const storedEmail = localStorage.getItem("rememberedEmployeeEmail");
     if (storedEmail) {
       setEmail(storedEmail);
       setRememberMe(true);
@@ -29,17 +29,33 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Firebase sign in method
-      await signInWithEmailAndPassword(auth, email, password);
+      const q = query(collection(db, "accounts"), where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-      setIsLoading(false);
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
+      if (!querySnapshot.empty) {
+        const employeeDoc = querySnapshot.docs[0];
+        const employeeData = employeeDoc.data();
+
+        if (employeeData.password === password) {
+          setIsLoading(false);
+
+          // Store document ID along with email
+          if (rememberMe) {
+            console.log("Setting document ID:", employeeDoc.id);
+            localStorage.setItem("rememberedEmployeeEmail", email);
+            localStorage.setItem("employeeDocId", employeeDoc.id);
+          } else {
+            localStorage.removeItem("rememberedEmployeeEmail");
+            localStorage.removeItem("employeeDocId");
+          }
+
+          navigate("/employee-dashboard");
+        } else {
+          throw new Error("Invalid email or password.");
+        }
       } else {
-        localStorage.removeItem("rememberedEmail");
+        throw new Error("Invalid email or password.");
       }
-
-      navigate("/dashboard"); // Redirect upon successful login
     } catch (error) {
       setIsLoading(false);
       setError("Invalid email or password. Please try again.");
@@ -62,7 +78,7 @@ const Login = () => {
           <img src={logo} alt="Logo" className="h-20 w-auto" />
         </div>
         <h2 className="text-3xl mb-4 text-center font-bold text-brown-500">
-          Login Now
+          Employee Login
         </h2>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -138,21 +154,15 @@ const Login = () => {
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-        {/* Add the Employee Login link here */}
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Employee?{" "}
-            <Link
-              to="/employee-login"
-              className="text-brown-500 hover:underline"
-            >
-              Login Here
-            </Link>
-          </p>
-        </div>
+        <p className="text-center mt-4 text-sm text-gray-600">
+          Admin?{" "}
+          <Link to="/" className="text-brown-500 hover:underline">
+            Login Here
+          </Link>
+        </p>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default EmployeeLogin;
