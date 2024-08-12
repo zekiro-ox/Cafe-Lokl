@@ -39,9 +39,7 @@ const EmployeeLogin = () => {
         if (employeeData.password === password) {
           setIsLoading(false);
 
-          // Store document ID along with email
           if (rememberMe) {
-            console.log("Setting document ID:", employeeDoc.id);
             localStorage.setItem("rememberedEmployeeEmail", email);
             localStorage.setItem("employeeDocId", employeeDoc.id);
           } else {
