@@ -10,7 +10,8 @@ import {
   addDoc,
   updateDoc,
   doc,
-  setDoc,
+  getDoc,
+  Timestamp,
 } from "firebase/firestore";
 
 const EmployeeDashboard = () => {
@@ -41,9 +42,10 @@ const EmployeeDashboard = () => {
             const employeeDoc = querySnapshot.docs[0];
             const employeeData = employeeDoc.data();
             setEmployeeName(employeeData.name);
-            fetchAttendanceRecords(docId);
+            await fetchAttendanceRecords(docId);
           } else {
             console.error("Employee data not found for email:", storedEmail);
+            navigate("/employee-login");
           }
         } else {
           console.error("Stored email or document ID is missing");
@@ -54,21 +56,6 @@ const EmployeeDashboard = () => {
       }
     };
 
-    const fetchAttendanceRecords = async (docId) => {
-      try {
-        const logsCollectionRef = collection(db, "timelogs", docId, "logs");
-        const querySnapshot = await getDocs(logsCollectionRef);
-
-        const records = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setAttendanceRecords(records);
-      } catch (error) {
-        console.error("Error fetching attendance records:", error);
-      }
-    };
-
     fetchEmployeeData();
 
     return () => {
@@ -76,7 +63,21 @@ const EmployeeDashboard = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [navigate]);
+
+  const fetchAttendanceRecords = async (docId) => {
+    try {
+      const logsCollection = collection(db, "timelogs", docId, "logs");
+      const logsSnapshot = await getDocs(logsCollection);
+      const logsData = logsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setAttendanceRecords(logsData);
+    } catch (error) {
+      console.error("Error fetching attendance records:", error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("rememberedEmployeeEmail");
@@ -89,30 +90,22 @@ const EmployeeDashboard = () => {
       try {
         const docId = localStorage.getItem("employeeDocId");
 
-        if (docId === currentUser.uid) {
-          // Ensure docId matches the authenticated user’s UID
-          const logRef = await addDoc(
-            collection(db, "timelogs", docId, "logs"),
-            {
-              status: "Clocked In",
-              timeIn: new Date(),
-              timeOut: null,
-              breakStart: null,
-              breakEnd: null,
-            }
-          );
+        const logRef = await addDoc(collection(db, "timelogs", docId, "logs"), {
+          status: "Clocked In",
+          timeIn: Timestamp.fromDate(new Date()),
+          timeOut: null,
+          breakStart: null,
+          breakEnd: null,
+        });
 
-          setAttendanceRecords((prevRecords) => [
-            ...prevRecords,
-            { id: logRef.id, status: "Clocked In", timeIn: new Date() },
-          ]);
-          setStatus("Clocked In");
-          setCurrentLogId(logRef.id);
+        setAttendanceRecords((prevRecords) => [
+          ...prevRecords,
+          { id: logRef.id, status: "Clocked In", timeIn: new Date() },
+        ]);
+        setStatus("Clocked In");
+        setCurrentLogId(logRef.id);
 
-          startTimer();
-        } else {
-          console.error("User ID does not match authenticated user.");
-        }
+        startTimer();
       } catch (error) {
         console.error("Error recording Time In:", error);
       }
@@ -124,11 +117,10 @@ const EmployeeDashboard = () => {
       try {
         const docId = localStorage.getItem("employeeDocId");
 
-        // Update the current log in the logs subcollection
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
         await updateDoc(logRef, {
           status: "On Break",
-          breakStart: new Date(),
+          breakStart: Timestamp.fromDate(new Date()),
         });
 
         setAttendanceRecords((prevRecords) =>
@@ -152,11 +144,10 @@ const EmployeeDashboard = () => {
       try {
         const docId = localStorage.getItem("employeeDocId");
 
-        // Update the current log in the logs subcollection
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
         await updateDoc(logRef, {
           status: "Clocked In",
-          breakEnd: new Date(),
+          breakEnd: Timestamp.fromDate(new Date()),
         });
 
         setAttendanceRecords((prevRecords) =>
@@ -180,11 +171,10 @@ const EmployeeDashboard = () => {
       try {
         const docId = localStorage.getItem("employeeDocId");
 
-        // Update the current log in the logs subcollection
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
         await updateDoc(logRef, {
           status: "Clocked Out",
-          timeOut: new Date(),
+          timeOut: Timestamp.fromDate(new Date()),
         });
 
         setAttendanceRecords((prevRecords) =>
@@ -223,6 +213,10 @@ const EmployeeDashboard = () => {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs}:${mins}:${secs}`;
+  };
+
+  const formatDate = (timestamp) => {
+    return timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : "";
   };
 
   return (
@@ -269,48 +263,47 @@ const EmployeeDashboard = () => {
           </button>
         </div>
 
-        <div className="mb-4">
-          <p>Status: {status}</p>
-          {isTimerRunning && <p>Timer: {formatTime(timer)}</p>}
+        <div className="flex justify-center mb-4">
+          <div className="bg-white p-4 rounded-md shadow-md">
+            <div className="text-2xl font-semibold">
+              Timer: {formatTime(timer)}
+            </div>
+          </div>
         </div>
 
-        <h2 className="text-lg font-semibold mb-4">Attendance Records</h2>
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead>
-            <tr>
-              <th className="border px-4 py-2">Status</th>
-              <th className="border px-4 py-2">Time In</th>
-              <th className="border px-4 py-2">Break Start</th>
-              <th className="border px-4 py-2">Break End</th>
-              <th className="border px-4 py-2">Time Out</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendanceRecords.map((record) => (
-              <tr key={record.id}>
-                <td className="border px-4 py-2">{record.status}</td>
-                <td className="border px-4 py-2">
-                  {record.timeIn ? record.timeIn.toDate().toLocaleString() : ""}
-                </td>
-                <td className="border px-4 py-2">
-                  {record.breakStart
-                    ? record.breakStart.toDate().toLocaleString()
-                    : ""}
-                </td>
-                <td className="border px-4 py-2">
-                  {record.breakEnd
-                    ? record.breakEnd.toDate().toLocaleString()
-                    : ""}
-                </td>
-                <td className="border px-4 py-2">
-                  {record.timeOut
-                    ? record.timeOut.toDate().toLocaleString()
-                    : ""}
-                </td>
+        <div className="bg-white p-4 rounded-md shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Attendance Records</h2>
+          <table className="min-w-full bg-white">
+            <thead>
+              <tr>
+                <th className="py-2 px-4 border-b">Status</th>
+                <th className="py-2 px-4 border-b">Time In</th>
+                <th className="py-2 px-4 border-b">Break Start</th>
+                <th className="py-2 px-4 border-b">Break End</th>
+                <th className="py-2 px-4 border-b">Time Out</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {attendanceRecords.map((record) => (
+                <tr key={record.id}>
+                  <td className="py-2 px-4 border-b">{record.status}</td>
+                  <td className="py-2 px-4 border-b">
+                    {formatDate(record.timeIn)}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {formatDate(record.breakStart)}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {formatDate(record.breakEnd)}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {formatDate(record.timeOut)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

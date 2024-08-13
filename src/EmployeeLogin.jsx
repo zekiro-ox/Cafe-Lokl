@@ -14,13 +14,11 @@ const EmployeeLogin = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("rememberedEmployeeEmail");
     if (storedEmail) {
       setEmail(storedEmail);
-      setRememberMe(true);
     }
   }, []);
 
@@ -39,15 +37,14 @@ const EmployeeLogin = () => {
         if (employeeData.password === password) {
           setIsLoading(false);
 
-          if (rememberMe) {
-            localStorage.setItem("rememberedEmployeeEmail", email);
-            localStorage.setItem("employeeDocId", employeeDoc.id);
-          } else {
-            localStorage.removeItem("rememberedEmployeeEmail");
-            localStorage.removeItem("employeeDocId");
-          }
+          // Save email and document ID to local storage
+          localStorage.setItem("rememberedEmployeeEmail", email);
+          localStorage.setItem("employeeDocId", employeeDoc.id);
 
-          navigate("/employee-dashboard");
+          // Pass the document ID to the next component
+          navigate("/employee-dashboard", {
+            state: { employeeDocId: employeeDoc.id },
+          });
         } else {
           throw new Error("Invalid email or password.");
         }
@@ -63,10 +60,6 @@ const EmployeeLogin = () => {
 
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
-  };
-
-  const handleRememberMe = () => {
-    setRememberMe((prevRememberMe) => !prevRememberMe);
   };
 
   return (
@@ -125,22 +118,6 @@ const EmployeeLogin = () => {
                 <FaEye className="h-5 w-5 text-gray-500" />
               )}
             </button>
-          </div>
-          <div className="flex items-center">
-            <input
-              id="remember"
-              name="remember"
-              type="checkbox"
-              className="h-4 w-4 text-brown-600 focus:ring-brown-500 border-gray-300 rounded"
-              checked={rememberMe}
-              onChange={handleRememberMe}
-            />
-            <label
-              htmlFor="remember"
-              className="ml-2 block text-sm text-gray-900"
-            >
-              Remember me
-            </label>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
