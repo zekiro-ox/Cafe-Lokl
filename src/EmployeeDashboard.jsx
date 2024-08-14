@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaSignOutAlt } from "react-icons/fa";
+import { FaSignOutAlt, FaClock, FaPlay, FaPause, FaStop } from "react-icons/fa";
 import { db } from "./config/firebase";
 import {
   getDocs,
@@ -10,7 +10,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  getDoc,
   Timestamp,
 } from "firebase/firestore";
 
@@ -69,17 +68,56 @@ const EmployeeDashboard = () => {
     try {
       const logsCollection = collection(db, "timelogs", docId, "logs");
       const logsSnapshot = await getDocs(logsCollection);
-      const logsData = logsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const logsData = logsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        const timerStart = data.timerStart
+          ? data.timerStart.toDate().getTime()
+          : null;
+        const now = new Date().getTime();
+        const elapsed = timerStart ? Math.floor((now - timerStart) / 1000) : 0;
+
+        return {
+          id: doc.id,
+          ...data,
+          elapsed,
+        };
+      });
       setAttendanceRecords(logsData);
     } catch (error) {
       console.error("Error fetching attendance records:", error);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (status === "Clocked In" || status === "On Break") {
+      try {
+        const docId = localStorage.getItem("employeeDocId");
+        const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
+
+        await updateDoc(logRef, {
+          status: status === "Clocked In" ? "Clocked Out" : status,
+          timeOut:
+            status === "Clocked In" ? Timestamp.fromDate(new Date()) : null,
+        });
+
+        setAttendanceRecords((prevRecords) =>
+          prevRecords.map((record) =>
+            record.id === currentLogId
+              ? {
+                  ...record,
+                  status: status === "Clocked In" ? "Clocked Out" : status,
+                  timeOut: status === "Clocked In" ? new Date() : null,
+                }
+              : record
+          )
+        );
+        setStatus("Clocked Out");
+        stopTimer();
+      } catch (error) {
+        console.error("Error updating log before logout:", error);
+      }
+    }
+
     localStorage.removeItem("rememberedEmployeeEmail");
     localStorage.removeItem("employeeDocId");
     navigate("/employee-login");
@@ -96,11 +134,17 @@ const EmployeeDashboard = () => {
           timeOut: null,
           breakStart: null,
           breakEnd: null,
+          timerStart: new Date(), // Store the timer start time
         });
 
         setAttendanceRecords((prevRecords) => [
           ...prevRecords,
-          { id: logRef.id, status: "Clocked In", timeIn: new Date() },
+          {
+            id: logRef.id,
+            status: "Clocked In",
+            timeIn: new Date(),
+            timerStart: new Date(),
+          },
         ]);
         setStatus("Clocked In");
         setCurrentLogId(logRef.id);
@@ -209,96 +253,110 @@ const EmployeeDashboard = () => {
   };
 
   const formatTime = (seconds) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const hrs = String(Math.floor(seconds / 3600)).padStart(2, "0");
+    const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+    const secs = String(seconds % 60).padStart(2, "0");
     return `${hrs}:${mins}:${secs}`;
   };
 
   const formatDate = (timestamp) => {
-    return timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : "";
+    return timestamp
+      ? new Date(timestamp.seconds * 1000).toLocaleDateString()
+      : "";
+  };
+
+  const formatTimeOnly = (timestamp) => {
+    return timestamp
+      ? new Date(timestamp.seconds * 1000).toLocaleTimeString()
+      : "";
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-brown-500 p-4 flex justify-between">
-        <div className="text-white font-semibold">Employee Dashboard</div>
-        <div className="text-white font-semibold">Welcome, {employeeName}</div>
+      <nav className="bg-brown-500 p-4 flex justify-between items-center">
+        <div className="text-white text-xl font-bold">Dashboard</div>
+        <div className="text-white font-semibold italic text-lg">
+          Welcome, {employeeName}
+        </div>
         <button
           onClick={handleLogout}
-          className="text-white hover:text-brown-300"
+          className="text-white hover:text-brown-300 flex items-center space-x-2"
         >
           <FaSignOutAlt />
         </button>
       </nav>
+
       <div className="container mx-auto p-4">
-        <div className="flex justify-between mb-4">
+        <div className="flex flex-wrap justify-center sm:justify-between space-x-4  mb-4">
           <button
             onClick={handleTimeIn}
-            className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600"
+            className="bg-green-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-green-600 disabled:opacity-50"
             disabled={status !== "Clocked Out"}
           >
-            Time In
+            <FaPlay className="text-lg" />
+            <span className="hidden sm:inline">Time In</span>
           </button>
           <button
             onClick={handleBreakStart}
-            className="bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
+            className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
             disabled={status !== "Clocked In"}
           >
-            Break Start
+            <FaPause className="text-lg" />
+            <span className="hidden sm:inline">Break Start</span>
           </button>
           <button
             onClick={handleBreakEnd}
-            className="bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600"
+            className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
             disabled={status !== "On Break"}
           >
-            Break End
+            <FaPlay className="text-lg" />
+            <span className="hidden sm:inline">Break End</span>
           </button>
           <button
             onClick={handleTimeOut}
-            className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600"
+            className="bg-red-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-red-600 disabled:opacity-50"
             disabled={status === "Clocked Out"}
           >
-            Time Out
+            <FaStop className="text-lg" />
+            <span className="hidden sm:inline">Time Out</span>
           </button>
         </div>
 
-        <div className="flex justify-center mb-4">
-          <div className="bg-white p-4 rounded-md shadow-md">
-            <div className="text-2xl font-semibold">
-              Timer: {formatTime(timer)}
-            </div>
-          </div>
+        <div className="text-center text-2xl font-bold mb-4">
+          Timer: {formatTime(timer)}
         </div>
-
-        <div className="bg-white p-4 rounded-md shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Attendance Records</h2>
-          <table className="min-w-full bg-white">
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-300">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b">Status</th>
-                <th className="py-2 px-4 border-b">Time In</th>
-                <th className="py-2 px-4 border-b">Break Start</th>
-                <th className="py-2 px-4 border-b">Break End</th>
-                <th className="py-2 px-4 border-b">Time Out</th>
+                <th className="py-2 px-4 border-b text-left">Date</th>
+                <th className="py-2 px-4 border-b text-left">Time In</th>
+                <th className="py-2 px-4 border-b text-left">Break Start</th>
+                <th className="py-2 px-4 border-b text-left">Break End</th>
+                <th className="py-2 px-4 border-b text-left">Time Out</th>
+                <th className="py-2 px-4 border-b text-left">Status</th>
               </tr>
             </thead>
+
             <tbody>
               {attendanceRecords.map((record) => (
                 <tr key={record.id}>
-                  <td className="py-2 px-4 border-b">{record.status}</td>
                   <td className="py-2 px-4 border-b">
                     {formatDate(record.timeIn)}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    {formatDate(record.breakStart)}
+                    {formatTimeOnly(record.timeIn)}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    {formatDate(record.breakEnd)}
+                    {formatTimeOnly(record.breakStart)}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    {formatDate(record.timeOut)}
+                    {formatTimeOnly(record.breakEnd)}
                   </td>
+                  <td className="py-2 px-4 border-b">
+                    {formatTimeOnly(record.timeOut)}
+                  </td>
+                  <td className="py-2 px-4 border-b">{record.status}</td>
                 </tr>
               ))}
             </tbody>
