@@ -103,6 +103,11 @@ const EmployeeLog = () => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditLogId(null);
+    setNewTimeOut("");
+  };
+
   const formatDate = (date) => {
     return date ? new Date(date).toLocaleDateString() : "";
   };
@@ -129,10 +134,10 @@ const EmployeeLog = () => {
     <div className="p-6 lg:ml-64 bg-gray-100 min-h-screen">
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Employee Logs</h2>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold mb-4 md:mb-0">Employee Logs</h2>
           <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
+            <div className="relative">
               <select
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
                 className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500"
@@ -145,7 +150,7 @@ const EmployeeLog = () => {
                 ))}
               </select>
             </div>
-            <div className="relative flex-1">
+            <div className="relative">
               <input
                 type="text"
                 placeholder="Search logs..."
@@ -170,13 +175,13 @@ const EmployeeLog = () => {
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} className="border-b">
+                  <tr key={log.id} className="border-b hover:bg-gray-100">
                     <td className="py-3 px-4">{log.employeeName}</td>
                     <td className="py-3 px-4">{formatDate(log.date)}</td>
                     <td className="py-3 px-4">{formatTime(log.timeIn)}</td>
                     <td className="py-3 px-4">
                       {editLogId === log.id ? (
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
                           <input
                             type="time"
                             value={
@@ -194,14 +199,20 @@ const EmployeeLog = () => {
                           />
                           <button
                             onClick={() => handleSaveTimeOut(log.id)}
-                            className="ml-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                           >
                             Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          >
+                            Cancel
                           </button>
                         </div>
                       ) : (
                         <div
-                          className="cursor-pointer font-semibold underline"
+                          className="cursor-pointer font-semibold underline text-brown-600"
                           onClick={() => {
                             setEditLogId(log.id);
                             setNewTimeOut(
