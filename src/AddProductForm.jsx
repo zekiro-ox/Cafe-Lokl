@@ -9,7 +9,7 @@ const AddProductForm = ({ onAddProduct }) => {
   const [subCategory, setSubCategory] = useState("");
   const [price, setPrice] = useState("");
   const [available, setAvailable] = useState(true);
-  const [ingredients, setIngredients] = useState([""]);
+  const [ingredients, setIngredients] = useState([{ name: "", price: "" }]); // Updated state
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [image, setImage] = useState(null);
   const [description, setDescription] = useState("");
@@ -38,12 +38,12 @@ const AddProductForm = ({ onAddProduct }) => {
   }, []);
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, ""]);
+    setIngredients([...ingredients, { name: "", price: "" }]); // Updated to add an object
   };
 
-  const handleIngredientChange = (index, event) => {
+  const handleIngredientChange = (index, event, field) => {
     const newIngredients = [...ingredients];
-    newIngredients[index] = event.target.value;
+    newIngredients[index][field] = event.target.value;
     setIngredients(newIngredients);
   };
 
@@ -60,7 +60,9 @@ const AddProductForm = ({ onAddProduct }) => {
       subCategory,
       price,
       available, // Ensure this is boolean
-      ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
+      ingredients: ingredients.filter(
+        (ingredient) => ingredient.name.trim() !== "" && ingredient.price !== ""
+      ),
       image,
       description, // Image file to be handled in ProductPage
     };
@@ -147,10 +149,10 @@ const AddProductForm = ({ onAddProduct }) => {
             Add-ons Ingredients
           </label>
           {ingredients.map((ingredient, index) => (
-            <div key={index} className="flex items-center mb-2">
+            <div key={index} className="flex items-center mb-2 gap-2">
               <select
-                value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e)}
+                value={ingredient.name}
+                onChange={(e) => handleIngredientChange(index, e, "name")}
                 className="p-2 border rounded-lg flex-1"
               >
                 <option value="" disabled>
@@ -162,6 +164,13 @@ const AddProductForm = ({ onAddProduct }) => {
                   </option>
                 ))}
               </select>
+              <input
+                type="number"
+                placeholder="Price"
+                value={ingredient.price}
+                onChange={(e) => handleIngredientChange(index, e, "price")}
+                className="p-2 border rounded-lg w-24"
+              />
               {index === ingredients.length - 1 && (
                 <button
                   type="button"

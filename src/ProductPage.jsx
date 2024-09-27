@@ -262,8 +262,14 @@ const ProductPage = () => {
                   <strong>Price:</strong> {viewProduct.price}
                 </p>
                 <p>
-                  <strong>Ingredients:</strong>{" "}
-                  {viewProduct.ingredients.join(", ")}
+                  <strong>Ingredients:</strong>
+                  <ul className="list-disc pl-5 mt-1">
+                    {viewProduct.ingredients.map((ingredient, index) => (
+                      <li key={index}>
+                        {ingredient.name} - P {ingredient.price}
+                      </li>
+                    ))}
+                  </ul>
                 </p>
                 {viewProduct.image && (
                   <div className="mt-4 mb-4">

@@ -44,18 +44,20 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       setSubCategory(product.subCategory || "");
       setPrice(product.price || "");
       setAvailable(product.available || true);
-      setIngredients(product.ingredients || []);
+      setIngredients(
+        product.ingredients || [{ name: "", price: "" }] // Update to include price
+      );
       setDescription(product.description || "");
     }
   }, [product]);
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, ""]);
+    setIngredients([...ingredients, { name: "", price: "" }]);
   };
 
-  const handleIngredientChange = (index, event) => {
+  const handleIngredientChange = (index, field, value) => {
     const newIngredients = [...ingredients];
-    newIngredients[index] = event.target.value;
+    newIngredients[index] = { ...newIngredients[index], [field]: value };
     setIngredients(newIngredients);
   };
 
@@ -88,7 +90,10 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       subCategory,
       price,
       available, // Ensure this is boolean
-      ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
+      ingredients: ingredients.filter(
+        (ingredient) =>
+          ingredient.name.trim() !== "" && ingredient.price.trim() !== ""
+      ),
       image: imageURL,
       description,
     };
@@ -184,9 +189,11 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
           {ingredients.map((ingredient, index) => (
             <div key={index} className="flex items-center mb-2">
               <select
-                value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e)}
-                className="p-2 border rounded-lg flex-1"
+                value={ingredient.name}
+                onChange={(e) =>
+                  handleIngredientChange(index, "name", e.target.value)
+                }
+                className="p-2 border rounded-lg flex-1 mr-2"
               >
                 <option value="" disabled>
                   Select Ingredient
@@ -197,13 +204,22 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
                   </option>
                 ))}
               </select>
+              <input
+                type="number"
+                value={ingredient.price}
+                onChange={(e) =>
+                  handleIngredientChange(index, "price", e.target.value)
+                }
+                placeholder="Price"
+                className="p-2 border rounded-lg w-20"
+              />
               {index === ingredients.length - 1 && (
                 <button
                   type="button"
                   onClick={handleAddIngredient}
                   className="ml-2 px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
                 >
-                  Add Ingredient
+                  Add
                 </button>
               )}
             </div>
