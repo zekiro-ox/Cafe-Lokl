@@ -250,6 +250,9 @@ const ProductPage = () => {
                   <strong>Name:</strong> {viewProduct.name}
                 </p>
                 <p>
+                  <strong>Description:</strong> {viewProduct.description}
+                </p>
+                <p>
                   <strong>Category:</strong> {viewProduct.category}
                 </p>
                 <p>
@@ -267,7 +270,7 @@ const ProductPage = () => {
                     <img
                       src={viewProduct.image}
                       alt={viewProduct.name}
-                      className="max-w-full rounded-lg shadow-lg"
+                      className="max-w-full rounded-lg shadow-lg h-64 object-contain"
                     />
                   </div>
                 )}

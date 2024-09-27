@@ -4,7 +4,6 @@ import Login from "./Login";
 import Dashboard from "./Dashboard";
 import ProductPage from "./ProductPage";
 import EmployeeLog from "./EmployeeLogs";
-import SalesReport from "./SalesReport";
 import Inventory from "./Inventory";
 import EmployeeAccount from "./EmployeeAccount";
 import EmployeeLogin from "./EmployeeLogin";
@@ -26,13 +25,12 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={<Dashboard salesData={salesData} />}
+        />
         <Route path="/products" element={<ProductPage />} />
         <Route path="/employee-logs" element={<EmployeeLog />} />
-        <Route
-          path="/sales-report"
-          element={<SalesReport salesData={salesData} />}
-        />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/employee-account" element={<EmployeeAccount />} />
         <Route path="/employee-login" element={<EmployeeLogin />} />

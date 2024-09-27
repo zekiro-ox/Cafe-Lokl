@@ -12,15 +12,15 @@ const AddProductForm = ({ onAddProduct }) => {
   const [ingredients, setIngredients] = useState([""]);
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [image, setImage] = useState(null);
+  const [description, setDescription] = useState("");
 
   // Predefined drink categories
   const drinkCategories = [
     "Hot Drinks",
-    "Ice Blend",
+    "Ice Blended",
+    "Non-Coffee",
     "Tea",
-    "Frappe",
-    "Juices",
-    "Dessert",
+    "Mocktails",
   ];
 
   useEffect(() => {
@@ -61,7 +61,8 @@ const AddProductForm = ({ onAddProduct }) => {
       price,
       available, // Ensure this is boolean
       ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
-      image, // Image file to be handled in ProductPage
+      image,
+      description, // Image file to be handled in ProductPage
     };
 
     onAddProduct(newProduct);
@@ -132,6 +133,14 @@ const AddProductForm = ({ onAddProduct }) => {
             <option value={true}>Available</option>
             <option value={false}>Unavailable</option>
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="p-2 border rounded-lg w-full"
+          />
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">

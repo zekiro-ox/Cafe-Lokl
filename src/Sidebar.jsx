@@ -5,7 +5,6 @@ import {
   FaTimes,
   FaBoxOpen,
   FaUserClock,
-  FaChartLine,
   FaWarehouse,
   FaSignOutAlt,
   FaUserShield,
@@ -111,22 +110,6 @@ const Sidebar = () => {
                 <FaUserClock className="flex-shrink-0 w-5 h-5 transition duration-75" />
                 <span className="flex-1 ms-3 whitespace-nowrap">
                   Employee Logs
-                </span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/sales-report"
-                className={`flex items-center p-4 rounded ${
-                  activeLink === "/sales-report"
-                    ? "bg-gray-200 text-black"
-                    : "text-white hover:bg-gray-200 hover:text-black"
-                }`}
-                onClick={() => handleLinkClick("/sales-report")}
-              >
-                <FaChartLine className="flex-shrink-0 w-5 h-5 transition duration-75" />
-                <span className="flex-1 ms-3 whitespace-nowrap">
-                  Sales Report
                 </span>
               </Link>
             </li>

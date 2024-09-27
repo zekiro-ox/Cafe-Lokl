@@ -12,15 +12,15 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   const [ingredients, setIngredients] = useState(product.ingredients || []);
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [description, setDescription] = useState(product.description || "");
 
   // Predefined drink categories
   const drinkCategories = [
     "Hot Drinks",
-    "Ice Blend",
+    "Ice Blended",
+    "Non-Coffee",
     "Tea",
-    "Frappe",
-    "Juices",
-    "Dessert",
+    "Mocktails",
   ];
 
   useEffect(() => {
@@ -45,6 +45,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       setPrice(product.price || "");
       setAvailable(product.available || true);
       setIngredients(product.ingredients || []);
+      setDescription(product.description || "");
     }
   }, [product]);
 
@@ -89,6 +90,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       available, // Ensure this is boolean
       ingredients: ingredients.filter((ingredient) => ingredient.trim() !== ""),
       image: imageURL,
+      description,
     };
 
     const productDocRef = doc(db, "products", product.id);
@@ -166,6 +168,14 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
             <option value={true}>Available</option>
             <option value={false}>Unavailable</option>
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="p-2 border rounded-lg w-full"
+          />
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
