@@ -168,7 +168,9 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Ingredients</label>
+          <label className="block text-sm font-medium mb-1">
+            Add-ons Ingredients
+          </label>
           {ingredients.map((ingredient, index) => (
             <div key={index} className="flex items-center mb-2">
               <select
