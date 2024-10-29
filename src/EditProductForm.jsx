@@ -9,7 +9,13 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   const [subCategory, setSubCategory] = useState(product.subCategory || "");
   const [price, setPrice] = useState(product.price || "");
   const [available, setAvailable] = useState(product.available || true);
-  const [ingredients, setIngredients] = useState(product.ingredients || []);
+  const [ingredients, setIngredients] = useState(
+    product.ingredients.map((ingredient) => ({
+      name: ingredient.name || "",
+      price: ingredient.price || "",
+      recommendedAmount: ingredient.recommendedAmount || "",
+    })) || []
+  );
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [description, setDescription] = useState(product.description || "");
@@ -92,7 +98,9 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       available, // Ensure this is boolean
       ingredients: ingredients.filter(
         (ingredient) =>
-          ingredient.name.trim() !== "" && ingredient.price.trim() !== ""
+          ingredient.name.trim() !== "" &&
+          ingredient.price.trim() !== "" &&
+          ingredient.recommendedAmount.trim() !== ""
       ),
       image: imageURL,
       description,
@@ -211,6 +219,19 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
                   handleIngredientChange(index, "price", e.target.value)
                 }
                 placeholder="Price"
+                className="p-2 border rounded-lg w-20 mr-2"
+              />
+              <input
+                type="number"
+                value={ingredient.recommendedAmount}
+                onChange={(e) =>
+                  handleIngredientChange(
+                    index,
+                    "recommendedAmount",
+                    e.target.value
+                  )
+                }
+                placeholder="Recommended Amount"
                 className="p-2 border rounded-lg w-20"
               />
               {index === ingredients.length - 1 && (

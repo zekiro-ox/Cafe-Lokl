@@ -9,7 +9,9 @@ const AddProductForm = ({ onAddProduct }) => {
   const [subCategory, setSubCategory] = useState("");
   const [price, setPrice] = useState("");
   const [available, setAvailable] = useState(true);
-  const [ingredients, setIngredients] = useState([{ name: "", price: "" }]); // Updated state
+  const [ingredients, setIngredients] = useState([
+    { name: "", price: "", recommendedAmount: "" },
+  ]); // Updated state
   const [ingredientOptions, setIngredientOptions] = useState([]);
   const [image, setImage] = useState(null);
   const [description, setDescription] = useState("");
@@ -61,7 +63,10 @@ const AddProductForm = ({ onAddProduct }) => {
       price,
       available, // Ensure this is boolean
       ingredients: ingredients.filter(
-        (ingredient) => ingredient.name.trim() !== "" && ingredient.price !== ""
+        (ingredient) =>
+          ingredient.name.trim() !== "" &&
+          ingredient.price !== "" &&
+          ingredient.recommendedAmount !== ""
       ),
       image,
       description, // Image file to be handled in ProductPage
@@ -169,6 +174,15 @@ const AddProductForm = ({ onAddProduct }) => {
                 placeholder="Price"
                 value={ingredient.price}
                 onChange={(e) => handleIngredientChange(index, e, "price")}
+                className="p-2 border rounded-lg w-24"
+              />
+              <input
+                type="number"
+                placeholder="Recommended Amount"
+                value={ingredient.recommendedAmount}
+                onChange={(e) =>
+                  handleIngredientChange(index, e, "recommendedAmount")
+                }
                 className="p-2 border rounded-lg w-24"
               />
               {index === ingredients.length - 1 && (

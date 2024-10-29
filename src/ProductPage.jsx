@@ -266,7 +266,8 @@ const ProductPage = () => {
                   <ul className="list-disc pl-5 mt-1">
                     {viewProduct.ingredients.map((ingredient, index) => (
                       <li key={index}>
-                        {ingredient.name} - P {ingredient.price}
+                        {ingredient.name} | P {ingredient.price} |{" "}
+                        {ingredient.recommendedAmount}
                       </li>
                     ))}
                   </ul>
