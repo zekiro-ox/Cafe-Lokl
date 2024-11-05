@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Import Link
 import { FaSignOutAlt, FaClock, FaPlay, FaPause, FaStop } from "react-icons/fa";
+import { FaCartShopping } from "react-icons/fa6";
 import { db } from "./config/firebase";
 import {
   getDocs,
@@ -287,7 +288,14 @@ const EmployeeDashboard = () => {
       </nav>
 
       <div className="container mx-auto p-4">
-        <div className="flex flex-wrap justify-center sm:justify-between space-x-4  mb-4">
+        <div className="flex flex-wrap justify-center sm:justify-between space-x-4 mb-4">
+          <Link
+            to="/order" // Use Link to navigate to orders
+            className="bg-blue-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-blue-600"
+          >
+            <FaCartShopping className="text-lg" />
+            <span className="hidden sm:inline">Check Orders</span>
+          </Link>
           <button
             onClick={handleTimeIn}
             className="bg-green-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-green-600 disabled:opacity-50"

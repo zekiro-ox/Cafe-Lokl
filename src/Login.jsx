@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link from react-router-dom
+import { useNavigate, Link } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
 import "./Login.css";
-import { auth } from "./config/firebase"; // Import Firebase authentication
+import { auth } from "./config/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const Login = () => {
   const navigate = useNavigate();
+  const db = getFirestore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +17,10 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTimer, setLockTimer] = useState(null);
+  const [remainingTime, setRemainingTime] = useState(0); // State for remaining time
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("rememberedEmail");
@@ -24,13 +30,49 @@ const Login = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (isLocked) {
+      setRemainingTime(10 * 60); // Set remaining time to 10 minutes in seconds
+      const timer = setInterval(() => {
+        setRemainingTime((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(timer);
+            setIsLocked(false);
+            setAttempts(0);
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000); // Update every second
+
+      return () => clearInterval(timer); // Cleanup timer on component unmount
+    }
+  }, [isLocked]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLocked) {
+      setError("Too many failed attempts. Please try again later.");
+      return;
+    }
+
     setIsLoading(true);
+    setError("");
 
     try {
-      // Firebase sign in method
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      const adminDocRef = doc(db, "admin", user.uid);
+      const adminDoc = await getDoc(adminDocRef);
+
+      if (!adminDoc.exists()) {
+        throw new Error("You are not authorized to access!");
+      }
 
       setIsLoading(false);
       if (rememberMe) {
@@ -39,10 +81,21 @@ const Login = () => {
         localStorage.removeItem("rememberedEmail");
       }
 
-      navigate("/dashboard"); // Redirect upon successful login
+      navigate("/dashboard");
     } catch (error) {
       setIsLoading(false);
-      setError("Invalid email or password. Please try again.");
+      setAttempts((prevAttempts) => {
+        const newAttempts = prevAttempts + 1;
+        if (newAttempts >= 3) {
+          setIsLocked(true);
+          setError("Too many failed attempts. Please try again later.");
+        } else {
+          setError(
+            error.message || "Invalid email or password. Please try again."
+          );
+        }
+        return newAttempts;
+      });
       console.error("Error signing in:", error);
     }
   };
@@ -53,6 +106,13 @@ const Login = () => {
 
   const handleRememberMe = () => {
     setRememberMe((prevRememberMe) => !prevRememberMe);
+  };
+
+  // Convert remaining time in seconds to minutes and seconds format
+  const formatTime = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
   return (
@@ -129,16 +189,27 @@ const Login = () => {
             </label>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
+          {attempts > 0 && !isLocked && (
+            <p className="text-sm text-gray-600">Attempt {attempts} of 3</p>
+          )}
+          {isLocked && (
+            <p className="text-sm text-gray-600">
+              Locked! Try again in {formatTime(remainingTime)}
+            </p>
+          )}
           <button
             type="submit"
             className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600 relative"
-            disabled={isLoading}
+            disabled={isLoading || isLocked}
           >
             {isLoading && <div className="loading-spinner"></div>}
-            {isLoading ? "Signing in..." : "Sign In"}
+            {isLocked
+              ? "Locked for 10 minutes"
+              : isLoading
+              ? "Signing in..."
+              : "Sign In"}
           </button>
         </form>
-        {/* Add the Employee Login link here */}
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
             Employee?{" "}

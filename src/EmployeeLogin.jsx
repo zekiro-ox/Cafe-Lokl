@@ -14,6 +14,9 @@ const EmployeeLogin = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0); // State for remaining time
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("rememberedEmployeeEmail");
@@ -22,9 +25,34 @@ const EmployeeLogin = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (isLocked) {
+      setRemainingTime(10 * 60); // Set remaining time to 10 minutes in seconds
+      const timer = setInterval(() => {
+        setRemainingTime((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(timer);
+            setIsLocked(false);
+            setAttempts(0);
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000); // Update every second
+
+      return () => clearInterval(timer); // Cleanup timer on component unmount
+    }
+  }, [isLocked]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLocked) {
+      setError("Too many failed attempts. Please try again later.");
+      return;
+    }
+
     setIsLoading(true);
+    setError("");
 
     try {
       const q = query(collection(db, "accounts"), where("email", "==", email));
@@ -46,20 +74,41 @@ const EmployeeLogin = () => {
             state: { employeeDocId: employeeDoc.id },
           });
         } else {
-          throw new Error("Invalid email or password.");
+          handleFailedAttempt();
         }
       } else {
-        throw new Error("Invalid email or password.");
+        handleFailedAttempt();
       }
     } catch (error) {
       setIsLoading(false);
-      setError("Invalid email or password. Please try again.");
+      handleFailedAttempt();
       console.error("Error signing in:", error);
     }
   };
 
+  const handleFailedAttempt = () => {
+    setIsLoading(false);
+    setAttempts((prevAttempts) => {
+      const newAttempts = prevAttempts + 1;
+      if (newAttempts >= 3) {
+        setIsLocked(true);
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
+      return newAttempts;
+    });
+  };
+
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
+  };
+
+  // Convert remaining time in seconds to minutes and seconds format
+  const formatTime = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
   return (
@@ -120,13 +169,25 @@ const EmployeeLogin = () => {
             </button>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
+          {attempts > 0 && !isLocked && (
+            <p className="text-sm text-gray-600">Attempt {attempts} of 3</p>
+          )}
+          {isLocked && (
+            <p className="text-sm text-gray-600">
+              Locked! Try again in {formatTime(remainingTime)}
+            </p>
+          )}
           <button
             type="submit"
             className="w-full bg-brown-500 text-white py-2 px-4 rounded-md hover:bg-brown-600 focus:outline-none focus:bg-brown-600 relative"
-            disabled={isLoading}
+            disabled={isLoading || isLocked}
           >
             {isLoading && <div className="loading-spinner"></div>}
-            {isLoading ? "Signing in..." : "Sign In"}
+            {isLocked
+              ? "Locked for 10 minutes"
+              : isLoading
+              ? "Signing in..."
+              : "Sign In"}
           </button>
         </form>
         <p className="text-center mt-4 text-sm text-gray-600">
