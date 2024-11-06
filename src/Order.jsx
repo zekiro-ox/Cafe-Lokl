@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar"; // Import the Sidebar component
-import { FaEye, FaCheckSquare, FaBell } from "react-icons/fa"; // Import necessary icons
-import { collection, getDocs } from "firebase/firestore"; // Import Firestore functions
-import { db } from "./config/firebase"; // Ensure the correct path to your Firebase config
+import Sidebar from "./Sidebar";
+import { FaCheckSquare, FaBell } from "react-icons/fa";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "./config/firebase";
 
 function Order() {
   const [upcomingOrders, setUpcomingOrders] = useState([]);
@@ -12,37 +12,27 @@ function Order() {
   useEffect(() => {
     const fetchUpcomingOrders = async () => {
       try {
-        const ordersCollection = collection(db, "order");
-        const ordersSnapshot = await getDocs(ordersCollection);
-        console.log("Orders Snapshot:", ordersSnapshot.docs); // Debugging log
+        const mainOrderId = "aAjkzDmsErTGJCwWDAMtwJ0Rvsd2"; // Hardcoded UID for testing
 
-        const ordersPromises = ordersSnapshot.docs.map(async (orderDoc) => {
-          const mainOrderId = orderDoc.id; // Document ID of the main order
-          const subCollectionRef = collection(
-            db,
-            `order/${mainOrderId}/orders`
-          );
-          const subCollectionSnapshot = await getDocs(subCollectionRef);
-          console.log(
-            `Subcollection for ${mainOrderId}:`,
-            subCollectionSnapshot.docs
-          ); // Debugging log
+        const subCollectionRef = collection(db, `order/${mainOrderId}/orders`);
+        const subCollectionSnapshot = await getDocs(subCollectionRef);
 
-          return subCollectionSnapshot.docs.map((subDoc) => {
-            const data = subDoc.data();
-            return {
-              id: subDoc.id,
-              orderDetails: data.orderID || [],
-              totalPrice: data.totalPrice,
-              createdAt: data.createdAt.value,
-            };
-          });
+        const fetchedOrders = subCollectionSnapshot.docs.map((subDoc) => {
+          const data = subDoc.data();
+          console.log(`Fetched data for sub-document ID: ${subDoc.id}`, data); // Debugging log
+
+          // Directly convert Firestore Timestamp to Date
+          const createdAt = data.createdAt ? data.createdAt.toDate() : null;
+
+          return {
+            id: subDoc.id,
+            orderDetails: data.orderID || [],
+            totalPrice: data.totalPrice,
+            createdAt: createdAt,
+          };
         });
 
-        const ordersList = await Promise.all(ordersPromises);
-        const flattenedOrders = ordersList.flat();
-
-        const finalOrders = flattenedOrders.flatMap((order) =>
+        const finalOrders = fetchedOrders.flatMap((order) =>
           order.orderDetails.map((item) => ({
             id: order.id,
             productName: item.productName,
@@ -55,7 +45,7 @@ function Order() {
         console.log("Final Orders:", finalOrders); // Debugging log
         setUpcomingOrders(finalOrders);
       } catch (err) {
-        console.error("Error fetching orders: ", err);
+        console.error("Error fetching orders:", err);
         setError("Failed to fetch orders.");
       } finally {
         setLoading(false);
@@ -65,13 +55,21 @@ function Order() {
     fetchUpcomingOrders();
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>{error}</div>;
-  }
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    return (
+      date.toLocaleString("en-US", {
+        timeZone: "Asia/Singapore", // Adjust the time zone as needed
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }) + " UTC+8"
+    ); // Append the UTC offset
+  };
 
   return (
     <div className="p-6 lg:ml-64 bg-gray-100 min-h-screen">
@@ -111,24 +109,23 @@ function Order() {
                     <td className="py-3 px-2 md:px-4">{order.id}</td>
                     <td className="py-3 px-2 md:px-4">{order.productName}</td>
                     <td className="py-3 px-2 md:px-4">
-                      {Array.isArray(order.ingredients)
+                      {Array.isArray(order.ingredients) &&
+                      order.ingredients.length
                         ? order.ingredients
-                            .map((ingredient) => ingredient.name)
+                            .map(
+                              (ingredient) =>
+                                `${ingredient.name} (Qty: ${ingredient.quantity})`
+                            )
                             .join(", ")
                         : "No ingredients available"}
                     </td>
                     <td className="py-3 px-2 md:px-4">
-                      ${order.totalPrice.toFixed(2)}
+                      P{order.totalPrice.toFixed(2)}
                     </td>
                     <td className="py-3 px-2 md:px-4">
-                      {order.createdAt
-                        ? new Date(
-                            order.createdAt.seconds * 1000
-                          ).toLocaleDateString()
-                        : "N/A"}
+                      {formatDate(order.createdAt)}
                     </td>
                     <td className="flex items-center justify-center py-3 px-2 md:px-4 space-x-2">
-                      <FaEye className="text-yellow-500 cursor-pointer hover:text-yellow-600" />
                       <FaCheckSquare className="text-blue-500 cursor-pointer hover:text-blue-600" />
                       <FaBell className="text-green-500 cursor-pointer hover:text-green-600" />
                     </td>
