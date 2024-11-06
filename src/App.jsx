@@ -36,7 +36,7 @@ function App() {
         <Route path="/employee-account" element={<EmployeeAccount />} />
         <Route path="/employee-login" element={<EmployeeLogin />} />
         <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
-        <Route path="/order" element={<Order />} />
+        <Route path="/orders" element={<Order />} />
       </Routes>
     </Router>
   );

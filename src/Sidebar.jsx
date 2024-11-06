@@ -10,6 +10,7 @@ import {
   FaUserShield,
   FaUserTie, // Import the icon for Employee Account
 } from "react-icons/fa";
+import { FaCartShopping } from "react-icons/fa6";
 import { MdDashboard } from "react-icons/md";
 import logo from "./assets/logo.png"; // Update the path as necessary
 
@@ -81,6 +82,20 @@ const Sidebar = () => {
               >
                 <MdDashboard className="flex-shrink-0 w-5 h-5 transition duration-75" />
                 <span className="flex-1 ms-3 whitespace-nowrap">Dashboard</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/orders" // Set the path for the Order page
+                className={`flex items-center p-4 rounded ${
+                  activeLink === "/orders"
+                    ? "bg-gray-200 text-black"
+                    : "text-white hover:bg-gray-200 hover:text-black"
+                }`}
+                onClick={() => handleLinkClick("/orders")}
+              >
+                <FaCartShopping className="flex-shrink-0 w-5 h-5 transition duration-75" />
+                <span className="flex-1 ms-3 whitespace-nowrap">Orders</span>
               </Link>
             </li>
             <li>
