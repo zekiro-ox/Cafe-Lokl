@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link
-import { FaSignOutAlt, FaClock, FaPlay, FaPause, FaStop } from "react-icons/fa";
-import { FaCartShopping } from "react-icons/fa6";
+import { useNavigate } from "react-router-dom";
+import { FaSignOutAlt, FaPlay, FaPause, FaStop } from "react-icons/fa";
 import { db } from "./config/firebase";
 import {
   getDocs,
@@ -12,6 +11,7 @@ import {
   updateDoc,
   doc,
   Timestamp,
+  onSnapshot,
 } from "firebase/firestore";
 
 const EmployeeDashboard = () => {
@@ -22,7 +22,6 @@ const EmployeeDashboard = () => {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentLogId, setCurrentLogId] = useState(null);
-
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -42,14 +41,14 @@ const EmployeeDashboard = () => {
             const employeeDoc = querySnapshot.docs[0];
             const employeeData = employeeDoc.data();
             setEmployeeName(employeeData.name);
-            await fetchAttendanceRecords(docId);
+            fetchAttendanceRecords(docId);
           } else {
             console.error("Employee data not found for email:", storedEmail);
             navigate("/employee-login");
           }
         } else {
           console.error("Stored email or document ID is missing");
-          navigate("/employee-login"); // Redirect to login if missing
+          navigate("/employee-login");
         }
       } catch (error) {
         console.error("Error fetching employee data:", error);
@@ -65,28 +64,43 @@ const EmployeeDashboard = () => {
     };
   }, [navigate]);
 
-  const fetchAttendanceRecords = async (docId) => {
-    try {
-      const logsCollection = collection(db, "timelogs", docId, "logs");
-      const logsSnapshot = await getDocs(logsCollection);
-      const logsData = logsSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        const timerStart = data.timerStart
-          ? data.timerStart.toDate().getTime()
-          : null;
-        const now = new Date().getTime();
-        const elapsed = timerStart ? Math.floor((now - timerStart) / 1000) : 0;
+  const fetchAttendanceRecords = (docId) => {
+    const logsCollection = collection(db, "timelogs", docId, "logs");
+    const unsubscribe = onSnapshot(
+      logsCollection,
+      (snapshot) => {
+        const logsData = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const timerStart = data.timerStart
+            ? data.timerStart.toDate().getTime()
+            : null;
+          const now = new Date().getTime();
+          const elapsed = timerStart
+            ? Math.floor((now - timerStart) / 1000)
+            : 0;
 
-        return {
-          id: doc.id,
-          ...data,
-          elapsed,
-        };
-      });
-      setAttendanceRecords(logsData);
-    } catch (error) {
-      console.error("Error fetching attendance records:", error);
-    }
+          return {
+            id: doc.id,
+            ...data,
+            elapsed,
+          };
+        });
+
+        // Sort logsData by timeIn in descending order
+        logsData.sort((a, b) => {
+          const timeA = a.timeIn ? a.timeIn.toDate().getTime() : 0;
+          const timeB = b.timeIn ? b.timeIn.toDate().getTime() : 0;
+          return timeB - timeA; // Sort in descending order
+        });
+
+        setAttendanceRecords(logsData);
+      },
+      (error) => {
+        console.error("Error fetching attendance records:", error);
+      }
+    );
+
+    return () => unsubscribe();
   };
 
   const handleLogout = async () => {
@@ -119,50 +133,44 @@ const EmployeeDashboard = () => {
       }
     }
 
-    localStorage.removeItem("rememberedEmployeeEmail");
+    localStorage.removeItem(" rememberedEmployeeEmail");
     localStorage.removeItem("employeeDocId");
     navigate("/employee-login");
   };
 
   const handleTimeIn = async () => {
-    if (status === "Clocked Out" || status === "On Break") {
+    if (status === "Clocked Out") {
       try {
         const docId = localStorage.getItem("employeeDocId");
-
         const logRef = await addDoc(collection(db, "timelogs", docId, "logs"), {
           status: "Clocked In",
           timeIn: Timestamp.fromDate(new Date()),
           timeOut: null,
           breakStart: null,
           breakEnd: null,
-          timerStart: new Date(), // Store the timer start time
+          timerStart: new Date(),
         });
 
-        setAttendanceRecords((prevRecords) => [
-          ...prevRecords,
-          {
-            id: logRef.id,
-            status: "Clocked In",
-            timeIn: new Date(),
-            timerStart: new Date(),
-          },
-        ]);
-        setStatus("Clocked In");
+        // Set the current log ID for future updates
         setCurrentLogId(logRef.id);
-
+        setStatus("Clocked In");
         startTimer();
       } catch (error) {
         console.error("Error recording Time In:", error);
       }
     }
   };
-
   const handleBreakStart = async () => {
     if (status === "Clocked In") {
       try {
         const docId = localStorage.getItem("employeeDocId");
-
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
+
+        if (!currentLogId) {
+          console.error("No current log ID set. Cannot update Break Start.");
+          return;
+        }
+
         await updateDoc(logRef, {
           status: "On Break",
           breakStart: Timestamp.fromDate(new Date()),
@@ -176,7 +184,6 @@ const EmployeeDashboard = () => {
           )
         );
         setStatus("On Break");
-
         stopTimer();
       } catch (error) {
         console.error("Error recording Break Start:", error);
@@ -188,8 +195,13 @@ const EmployeeDashboard = () => {
     if (status === "On Break") {
       try {
         const docId = localStorage.getItem("employeeDocId");
-
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
+
+        if (!currentLogId) {
+          console.error("No current log ID set. Cannot update Break End.");
+          return;
+        }
+
         await updateDoc(logRef, {
           status: "Clocked In",
           breakEnd: Timestamp.fromDate(new Date()),
@@ -203,7 +215,6 @@ const EmployeeDashboard = () => {
           )
         );
         setStatus("Clocked In");
-
         startTimer();
       } catch (error) {
         console.error("Error recording Break End:", error);
@@ -215,8 +226,13 @@ const EmployeeDashboard = () => {
     if (status === "Clocked In" || status === "On Break") {
       try {
         const docId = localStorage.getItem("employeeDocId");
-
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
+
+        if (!currentLogId) {
+          console.error("No current log ID set. Cannot update Time Out.");
+          return;
+        }
+
         await updateDoc(logRef, {
           status: "Clocked Out",
           timeOut: Timestamp.fromDate(new Date()),
@@ -230,11 +246,18 @@ const EmployeeDashboard = () => {
           )
         );
         setStatus("Clocked Out");
-
         stopTimer();
+        setCurrentLogId(null);
       } catch (error) {
         console.error("Error recording Time Out:", error);
       }
+    }
+  };
+
+  const handleDone = () => {
+    const docId = localStorage.getItem("employeeDocId");
+    if (docId) {
+      fetchAttendanceRecords(docId); // Refresh attendance records
     }
   };
 
@@ -261,13 +284,13 @@ const EmployeeDashboard = () => {
   };
 
   const formatDate = (timestamp) => {
-    return timestamp
+    return timestamp && timestamp.seconds
       ? new Date(timestamp.seconds * 1000).toLocaleDateString()
       : "";
   };
 
   const formatTimeOnly = (timestamp) => {
-    return timestamp
+    return timestamp && timestamp.seconds
       ? new Date(timestamp.seconds * 1000).toLocaleTimeString()
       : "";
   };
@@ -320,6 +343,12 @@ const EmployeeDashboard = () => {
           >
             <FaStop className="text-lg" />
             <span className="hidden sm:inline">Time Out</span>
+          </button>
+          <button
+            onClick={handleDone}
+            className="bg-blue-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-blue-600"
+          >
+            <span className="hidden sm:inline">Done</span>
           </button>
         </div>
 

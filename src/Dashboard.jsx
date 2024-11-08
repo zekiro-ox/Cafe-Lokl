@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { db } from "./config/firebase"; // Adjust the import based on your file structure
+import { collection, getDocs } from "firebase/firestore";
 import Sidebar from "./Sidebar";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
@@ -14,10 +16,37 @@ import {
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-const Dashboard = ({ salesData }) => {
+const Dashboard = () => {
+  const [salesData, setSalesData] = useState([]);
+  const [feedbackData, setFeedbackData] = useState([]);
   const [filter, setFilter] = useState("weekly");
   const [currentMonth, setCurrentMonth] = useState(0);
   const [filteredSalesData, setFilteredSalesData] = useState([]);
+
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      const querySnapshot = await getDocs(collection(db, "history"));
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setSalesData(data);
+    };
+
+    fetchSalesData();
+  }, []);
+  useEffect(() => {
+    const fetchFeedbackData = async () => {
+      const querySnapshot = await getDocs(collection(db, "customer"));
+      const feedback = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setFeedbackData(feedback);
+    };
+
+    fetchFeedbackData();
+  }, []);
 
   useEffect(() => {
     const today = new Date();
@@ -25,7 +54,7 @@ const Dashboard = ({ salesData }) => {
     const endOfCurrentWeek = endOfWeek(today);
 
     const filteredData = salesData.filter((item) => {
-      const itemDate = new Date(item.date);
+      const itemDate = item.createdAt.toDate(); // Convert Firestore timestamp to Date
       if (filter === "weekly") {
         const startDate = subDays(startOfCurrentWeek, currentMonth * 7);
         const endDate = subDays(endOfCurrentWeek, currentMonth * 7);
@@ -51,30 +80,30 @@ const Dashboard = ({ salesData }) => {
   }, [filter]);
 
   const totalSales = filteredSalesData.reduce(
-    (acc, item) => acc + item.sales,
+    (acc, item) => acc + item.quantity, // Use quantity from Firestore
     0
   );
   const totalRevenue = filteredSalesData.reduce(
-    (acc, item) => acc + item.revenue,
+    (acc, item) => acc + item.totalPrice, // Use totalPrice from Firestore
     0
   );
   const averageSalesPerDay =
     filteredSalesData.length > 0 ? totalSales / filteredSalesData.length : 0;
 
   const chartData = {
-    labels: filteredSalesData.map((item) =>
-      format(new Date(item.date), "yyyy-MM-dd")
+    labels: filteredSalesData.map(
+      (item) => format(item.createdAt.toDate(), "yyyy-MM-dd") // Use createdAt for labels
     ),
     datasets: [
       {
         label: "Sales",
-        data: filteredSalesData.map((item) => item.sales),
+        data: filteredSalesData.map((item) => item.quantity), // Use quantity for sales
         borderColor: "#4caf50",
         fill: false,
       },
       {
         label: "Revenue",
-        data: filteredSalesData.map((item) => item.revenue),
+        data: filteredSalesData.map((item) => item.totalPrice), // Use totalPrice for revenue
         borderColor: "#f44336",
         fill: false,
       },
@@ -176,7 +205,7 @@ const Dashboard = ({ salesData }) => {
                   <h4 className="text-lg font-semibold text-brown-500">
                     Revenue
                   </h4>
-                  <p className="text-gray-700">${totalRevenue.toFixed(2)}</p>
+                  <p className="text-gray-700">₱{totalRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-gray-100 p-4 rounded-lg">
                   <h4 className="text-lg font-semibold text-brown-500">
@@ -191,36 +220,19 @@ const Dashboard = ({ salesData }) => {
           </div>
         </div>
 
-        {/* Customer Feedback Container */}
         <div className="bg-white p-6 rounded-2xl shadow-2xl mt-6">
-          <h3 className="text-2xl mb-4 text-center font-bold text-brown-500">
+          <h3 className=" text-2xl mb-4 text-center font-bold text-brown-500">
             Customer Feedback
           </h3>
           <div className="space-y-4">
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <h4 className="text-lg font-semibold text-brown-500">
-                Feedback 1
-              </h4>
-              <p className="text-gray-700">
-                "Great service and quality products!" - John Doe
-              </p>
-            </div>
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <h4 className="text-lg font-semibold text-brown-500">
-                Feedback 2
-              </h4>
-              <p className="text-gray-700">
-                "Fast delivery and friendly staff." - Jane Smith
-              </p>
-            </div>
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <h4 className="text-lg font-semibold text-brown-500">
-                Feedback 3
-              </h4>
-              <p className="text-gray-700">
-                "Excellent product quality!" - Alice Johnson
-              </p>
-            </div>
+            {feedbackData.map((feedback) => (
+              <div key={feedback.id} className="bg-gray-100 p-4 rounded-lg">
+                <h4 className="text-lg font-semibold text-brown-500">
+                  {feedback.name}
+                </h4>
+                <p className="text-gray-700">"{feedback.feedback}"</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
