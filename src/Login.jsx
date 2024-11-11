@@ -4,8 +4,19 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
 import "./Login.css";
 import { auth } from "./config/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+  collection,
+} from "firebase/firestore";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -106,6 +117,33 @@ const Login = () => {
 
   const handleRememberMe = () => {
     setRememberMe((prevRememberMe) => !prevRememberMe);
+  };
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    try {
+      // Create a query to find the admin document with the matching email
+      const adminQuery = query(
+        collection(db, "admin"),
+        where("email", "==", email)
+      );
+      const querySnapshot = await getDocs(adminQuery);
+
+      if (querySnapshot.empty) {
+        setError("This email is not associated with any account.");
+        return;
+      }
+
+      // If we found the document, send the password reset email
+      await sendPasswordResetEmail(auth, email);
+      setError("Password reset email sent! Please check your inbox.");
+    } catch (error) {
+      setError(error.message || "Failed to send password reset email.");
+      console.error("Error sending password reset email:", error);
+    }
   };
 
   // Convert remaining time in seconds to minutes and seconds format
@@ -220,6 +258,12 @@ const Login = () => {
               Login Here
             </Link>
           </p>
+          <button
+            onClick={handleForgotPassword}
+            className="text-brown-500 hover:underline mt-2"
+          >
+            Forgot Password?
+          </button>
         </div>
       </div>
     </div>

@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaSignOutAlt, FaPlay, FaPause, FaStop } from "react-icons/fa";
+import {
+  FaSignOutAlt,
+  FaPlay,
+  FaPause,
+  FaStop,
+  FaCheckSquare,
+  FaBell,
+} from "react-icons/fa";
 import { db } from "./config/firebase";
 import {
   getDocs,
@@ -13,15 +20,20 @@ import {
   Timestamp,
   onSnapshot,
 } from "firebase/firestore";
+import NotificationModal from "./NotificationModal"; // Import the modal
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const [employeeName, setEmployeeName] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [upcomingOrders, setUpcomingOrders] = useState([]); // State for upcoming orders
   const [status, setStatus] = useState("Clocked Out");
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentLogId, setCurrentLogId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null); // Store user ID
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -103,6 +115,44 @@ const EmployeeDashboard = () => {
     return () => unsubscribe();
   };
 
+  // Fetch upcoming orders
+  const fetchUpcomingOrders = () => {
+    const ordersCollection = collection(db, "order");
+    const unsubscribe = onSnapshot(
+      ordersCollection,
+      (snapshot) => {
+        const fetchedOrders = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const createdAt = data.createdAt ? data.createdAt.toDate() : null;
+
+          return {
+            id: doc.id,
+            productName: data.productName || "",
+            ingredients: data.ingredients || [],
+            totalPrice: data.totalPrice,
+            createdAt: createdAt,
+            uid: data.uid || "", // Assuming uid is stored in the order document
+          };
+        });
+
+        setUpcomingOrders(fetchedOrders);
+      },
+      (error) => {
+        console.error("Error fetching upcoming orders:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  };
+
+  useEffect(() => {
+    const docId = localStorage.getItem("employeeDocId");
+    if (docId) {
+      fetchAttendanceRecords(docId);
+      fetchUpcomingOrders(); // Fetch upcoming orders when the component mounts
+    }
+  }, []);
+
   const handleLogout = async () => {
     if (status === "Clocked In" || status === "On Break") {
       try {
@@ -133,7 +183,7 @@ const EmployeeDashboard = () => {
       }
     }
 
-    localStorage.removeItem(" rememberedEmployeeEmail");
+    localStorage.removeItem("rememberedEmployeeEmail");
     localStorage.removeItem("employeeDocId");
     navigate("/employee-login");
   };
@@ -151,7 +201,6 @@ const EmployeeDashboard = () => {
           timerStart: new Date(),
         });
 
-        // Set the current log ID for future updates
         setCurrentLogId(logRef.id);
         setStatus("Clocked In");
         startTimer();
@@ -160,6 +209,7 @@ const EmployeeDashboard = () => {
       }
     }
   };
+
   const handleBreakStart = async () => {
     if (status === "Clocked In") {
       try {
@@ -295,10 +345,110 @@ const EmployeeDashboard = () => {
       : "";
   };
 
+  const handleCheckOrder = async (orderId) => {
+    alert("Status: Notifying the Customer");
+    const orderRef = doc(db, "order", orderId);
+    await updateDoc(orderRef, {
+      status: "Brew-tiful News! Your Drink’s Ready for You!",
+    });
+  };
+
+  const handleNotificationClick = (orderId, userId) => {
+    setSelectedOrderId(orderId);
+    setSelectedUserId(userId);
+    setIsModalOpen(true);
+  };
+
+  const formatOrderDate = (date) => {
+    if (!date) return "N/A";
+    return (
+      date.toLocaleString("en-US", {
+        timeZone: "Asia/Singapore",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }) + " UTC+8"
+    );
+  };
+
+  const handleSendNotification = async (message) => {
+    if (!selectedUserId) return;
+
+    const notificationRef = collection(db, "notification");
+    const timeSend = new Date();
+
+    await addDoc(notificationRef, {
+      message: message,
+      uid: selectedUserId,
+      timeSend: timeSend,
+    });
+
+    alert(
+      `Notification sent to User ID: ${selectedUserId}\nMessage: ${message}`
+    ); // Fixed variable name
+    setIsModalOpen(false);
+  };
+
+  const renderUpcomingOrders = () => (
+    <div className="mb-6">
+      <h2 className="text-xl font-bold mb-4">Upcoming Orders</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300">
+          <thead>
+            <tr>
+              <th className="py-2 px-4 border-b text-left">Order ID</th>
+              <th className="py-2 px-4 border-b text-left">Product Name</th>
+              <th className="py-2 px-4 border-b text-left">Total Amount</th>
+              <th className="py-2 px-4 border-b text-left">Order Date</th>
+              <th className="py-2 px-4 border-b text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {upcomingOrders.length > 0 ? (
+              upcomingOrders.map((order) => (
+                <tr key={order.id}>
+                  <td className="py-2 px-4 border-b">{order.id}</td>
+                  <td className="py-2 px-4 border-b">{order.productName}</td>
+                  <td className="py-2 px-4 border-b">
+                    P{order.totalPrice.toFixed(2)}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {formatOrderDate(order.createdAt)}
+                  </td>
+                  <td className="flex items-center justify-center py-2 px-4 border-b space-x-2">
+                    <FaCheckSquare
+                      className="text-blue-500 cursor-pointer hover:text-blue-600"
+                      onClick={() => handleCheckOrder(order.id)}
+                    />
+                    <FaBell
+                      className="text-green-500 cursor-pointer hover:text-green-600"
+                      onClick={() =>
+                        handleNotificationClick(order.id, order.uid)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="py-2 px-4 border-b text-center">
+                  No upcoming orders found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-brown-500 p-4 flex justify-between items-center">
-        <div className="text-white text-xl font-bold">Dashboard</div>
         <div className="text-white font-semibold italic text-lg">
           Welcome, {employeeName}
         </div>
@@ -311,6 +461,7 @@ const EmployeeDashboard = () => {
       </nav>
 
       <div className="container mx-auto p-4">
+        {renderUpcomingOrders()} {/* Render upcoming orders here */}
         <div className="flex flex-wrap justify-center sm:justify-between space-x-4 mb-4">
           <button
             onClick={handleTimeIn}
@@ -351,7 +502,6 @@ const EmployeeDashboard = () => {
             <span className="hidden sm:inline">Done</span>
           </button>
         </div>
-
         <div className="text-center text-2xl font-bold mb-4">
           Timer: {formatTime(timer)}
         </div>
@@ -393,6 +543,11 @@ const EmployeeDashboard = () => {
           </table>
         </div>
       </div>
+      <NotificationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSend={handleSendNotification}
+      />
     </div>
   );
 };

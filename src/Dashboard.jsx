@@ -13,8 +13,7 @@ import {
   endOfMonth,
   addMonths,
 } from "date-fns";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import Papa from "papaparse"; // Import PapaParse
 
 const Dashboard = () => {
   const [salesData, setSalesData] = useState([]);
@@ -35,13 +34,19 @@ const Dashboard = () => {
 
     fetchSalesData();
   }, []);
+
   useEffect(() => {
     const fetchFeedbackData = async () => {
       const querySnapshot = await getDocs(collection(db, "customer"));
-      const feedback = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const feedback = querySnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(
+          (feedback) => feedback.feedback && feedback.feedback.trim() !== ""
+        ); // Filter out empty feedback
+
       setFeedbackData(feedback);
     };
 
@@ -127,11 +132,40 @@ const Dashboard = () => {
     setCurrentMonth((prevMonth) => prevMonth + direction);
   };
 
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    return (
+      date.toLocaleString("en-US", {
+        timeZone: "Asia/Singapore",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }) + " UTC+8"
+    );
+  };
+
   const downloadSalesReport = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredSalesData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
-    XLSX.writeFile(workbook, "sales_report.xlsx");
+    const csvData = filteredSalesData.map(
+      ({ id, quantity, totalPrice, createdAt }) => ({
+        id,
+        quantity,
+        totalPrice,
+        createdAt: formatDate(createdAt.toDate()), // Use formatDate for formatting
+      })
+    );
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "sales_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -182,7 +216,7 @@ const Dashboard = () => {
                 onClick={downloadSalesReport}
                 className="p-2 border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 mt-2 lg:mt-0"
               >
-                Download Excel
+                Download CSV
               </button>
             </div>
           </div>
@@ -218,21 +252,24 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-2xl mt-6">
-          <h3 className=" text-2xl mb-4 text-center font-bold text-brown-500">
-            Customer Feedback
-          </h3>
-          <div className="space-y-4">
-            {feedbackData.map((feedback) => (
-              <div key={feedback.id} className="bg-gray-100 p-4 rounded-lg">
-                <h4 className="text-lg font-semibold text-brown-500">
-                  {feedback.name}
-                </h4>
-                <p className="text-gray-700">"{feedback.feedback}"</p>
-              </div>
-            ))}
+          <div className="bg-white p-6 rounded-2xl shadow-2xl mt-6">
+            <h3 className="text-2xl mb-4 text-center font-bold text-brown-500">
+              Customer Feedback
+            </h3>
+            <div className="space-y-4">
+              {feedbackData.map((feedback) => (
+                <div
+                  key={feedback.id}
+                  className="bg-gray-100 p-4 m-2 rounded-lg"
+                >
+                  <h4 className="text-lg font-semibold text-brown-500">
+                    {feedback.name ? feedback.name : "Unknown Customer"}
+                  </h4>
+                  <p className="text-gray-700">"{feedback.feedback}"</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
