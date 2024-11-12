@@ -184,7 +184,7 @@ const UpcomingOrders = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-4 px-4 text-center">
+                    <td colSpan="7" className="py-4 px-4 text-center">
                       No upcoming orders found.
                     </td>
                   </tr>
