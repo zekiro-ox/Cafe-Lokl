@@ -16,6 +16,17 @@ const UpcomingOrders = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("");
+
+  const statuses = [
+    "Order confirmed! It will take 15 mins before availability for pick up",
+    "Order confirmed! It will take 10 mins before availability for pick up",
+    "Order confirmed! It will take 5 mins before availability for pick up",
+    "Order confirmed! It will take 3 mins before availability for pick up",
+    "Your drinks is almost finished and will be ready for pick up",
+    "Brew-tiful News! Your Drink’s Ready for You!",
+  ];
 
   const fetchUpcomingOrders = () => {
     const ordersCollection = collection(db, "order");
@@ -33,6 +44,7 @@ const UpcomingOrders = () => {
             totalPrice: data.totalPrice,
             createdAt: createdAt,
             uid: data.uid || "",
+            specialRemarks: data.specialRemarks || "None",
           };
         });
 
@@ -50,12 +62,23 @@ const UpcomingOrders = () => {
     fetchUpcomingOrders();
   }, []);
 
-  const handleCheckOrder = async (orderId) => {
-    alert("Status: Notifying the Customer");
-    const orderRef = doc(db, "order", orderId);
+  const handleCheckOrder = async () => {
+    if (!selectedStatus || !selectedOrderId) return;
+
+    alert(`Status: ${selectedStatus}`);
+    const orderRef = doc(db, "order", selectedOrderId);
     await updateDoc(orderRef, {
-      status: "Brew-tiful News! Your Drink’s Ready for You!",
+      status: selectedStatus,
     });
+
+    setIsStatusModalOpen(false);
+    setSelectedOrderId(null);
+    setSelectedStatus("");
+  };
+
+  const handleOpenStatusModal = (orderId) => {
+    setSelectedOrderId(orderId);
+    setIsStatusModalOpen(true);
   };
 
   const handleNotificationClick = (orderId, userId) => {
@@ -113,6 +136,8 @@ const UpcomingOrders = () => {
                 <tr>
                   <th className="py-3 px-4 text-left">Order ID</th>
                   <th className="py-3 px-4 text-left">Product Name</th>
+                  <th className="py-3 px-4 text-left">Ingredients</th>
+                  <th className="py-3 px-4 text-left">Special Remarks</th>
                   <th className="py-3 px-4 text-left">Total Amount</th>
                   <th className="py-3 px-4 text-left">Order Date</th>
                   <th className="py-3 px-4 text-center">Actions</th>
@@ -125,6 +150,19 @@ const UpcomingOrders = () => {
                       <td className="py-3 px-4">{order.id}</td>
                       <td className="py-3 px-4">{order.productName}</td>
                       <td className="py-3 px-4">
+                        {" "}
+                        {Array.isArray(order.ingredients) &&
+                        order.ingredients.length
+                          ? order.ingredients
+                              .map(
+                                (ingredient) =>
+                                  `${ingredient.name} (Qty: ${ingredient.quantity})`
+                              )
+                              .join(", ")
+                          : "No ingredients available"}
+                      </td>
+                      <td className="py-3 px-4">{order.specialRemarks}</td>
+                      <td className="py-3 px-4">
                         P{order.totalPrice.toFixed(2)}
                       </td>
                       <td className="py-3 px-4">
@@ -133,7 +171,7 @@ const UpcomingOrders = () => {
                       <td className="py-3 px-4 flex justify-center space-x-4">
                         <FaCheckSquare
                           className="text-blue-500 cursor-pointer hover:text-blue-600"
-                          onClick={() => handleCheckOrder(order.id)}
+                          onClick={() => handleOpenStatusModal(order.id)}
                         />
                         <FaBell
                           className="text-green-500 cursor-pointer hover:text-green-600"
@@ -156,6 +194,46 @@ const UpcomingOrders = () => {
           </div>
         </div>
       </div>
+      {/* Status Modal */}
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-bold mb-4">Select Order Status</h2>
+            <select
+              className="w-full p-2 border rounded-lg mb-4"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              <option value="">Select Status</option>
+              {statuses.map((status, index) => (
+                <option key={index} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                onClick={() => setIsStatusModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
+                onClick={handleCheckOrder}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <NotificationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSend={handleSendNotification}
+      />
     </div>
   );
 };
