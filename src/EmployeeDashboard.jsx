@@ -1,18 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaSignOutAlt,
-  FaPlay,
-  FaPause,
-  FaStop,
-  FaCheckSquare,
-  FaBell,
-} from "react-icons/fa";
+import { FaPlay, FaPause, FaStop } from "react-icons/fa";
 import { db } from "./config/firebase";
 import {
-  getDocs,
-  query,
-  where,
+  getDoc,
   collection,
   addDoc,
   updateDoc,
@@ -20,46 +11,40 @@ import {
   Timestamp,
   onSnapshot,
 } from "firebase/firestore";
-import NotificationModal from "./NotificationModal"; // Import the modal
+// Import the modal
+import EmployeeSidebar from "./EmployeeSidebar"; // Import the sidebar// Import the UpcomingOrders component
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const [employeeName, setEmployeeName] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
-  const [upcomingOrders, setUpcomingOrders] = useState([]); // State for upcoming orders
   const [status, setStatus] = useState("Clocked Out");
   const [timer, setTimer] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentLogId, setCurrentLogId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [selectedUserId, setSelectedUserId] = useState(null); // Store user ID
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  // Store user ID
   const timerRef = useRef(null);
 
   useEffect(() => {
     const fetchEmployeeData = async () => {
       try {
-        const storedEmail = localStorage.getItem("rememberedEmployeeEmail");
         const docId = localStorage.getItem("employeeDocId");
 
-        if (storedEmail && docId) {
-          const q = query(
-            collection(db, "accounts"),
-            where("email", "==", storedEmail)
-          );
-          const querySnapshot = await getDocs(q);
+        if (docId) {
+          const employeeDocRef = doc(db, "accounts", docId);
+          const employeeDoc = await getDoc(employeeDocRef);
 
-          if (!querySnapshot.empty) {
-            const employeeDoc = querySnapshot.docs[0];
+          if (employeeDoc.exists()) {
             const employeeData = employeeDoc.data();
-            setEmployeeName(employeeData.name);
+            const fullName = `${employeeData.firstName} ${employeeData.lastName}`;
+            setEmployeeName(fullName);
             fetchAttendanceRecords(docId);
           } else {
-            console.error("Employee data not found for email:", storedEmail);
+            console.error("Employee data not found for document ID:", docId);
             navigate("/employee-login");
           }
         } else {
-          console.error("Stored email or document ID is missing");
+          console.error("Document ID is missing");
           navigate("/employee-login");
         }
       } catch (error) {
@@ -68,7 +53,6 @@ const EmployeeDashboard = () => {
     };
 
     fetchEmployeeData();
-
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -98,11 +82,10 @@ const EmployeeDashboard = () => {
           };
         });
 
-        // Sort logsData by timeIn in descending order
         logsData.sort((a, b) => {
           const timeA = a.timeIn ? a.timeIn.toDate().getTime() : 0;
           const timeB = b.timeIn ? b.timeIn.toDate().getTime() : 0;
-          return timeB - timeA; // Sort in descending order
+          return timeB - timeA;
         });
 
         setAttendanceRecords(logsData);
@@ -114,80 +97,6 @@ const EmployeeDashboard = () => {
 
     return () => unsubscribe();
   };
-
-  // Fetch upcoming orders
-  const fetchUpcomingOrders = () => {
-    const ordersCollection = collection(db, "order");
-    const unsubscribe = onSnapshot(
-      ordersCollection,
-      (snapshot) => {
-        const fetchedOrders = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          const createdAt = data.createdAt ? data.createdAt.toDate() : null;
-
-          return {
-            id: doc.id,
-            productName: data.productName || "",
-            ingredients: data.ingredients || [],
-            totalPrice: data.totalPrice,
-            createdAt: createdAt,
-            uid: data.uid || "", // Assuming uid is stored in the order document
-          };
-        });
-
-        setUpcomingOrders(fetchedOrders);
-      },
-      (error) => {
-        console.error("Error fetching upcoming orders:", error);
-      }
-    );
-
-    return () => unsubscribe();
-  };
-
-  useEffect(() => {
-    const docId = localStorage.getItem("employeeDocId");
-    if (docId) {
-      fetchAttendanceRecords(docId);
-      fetchUpcomingOrders(); // Fetch upcoming orders when the component mounts
-    }
-  }, []);
-
-  const handleLogout = async () => {
-    if (status === "Clocked In" || status === "On Break") {
-      try {
-        const docId = localStorage.getItem("employeeDocId");
-        const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
-
-        await updateDoc(logRef, {
-          status: status === "Clocked In" ? "Clocked Out" : status,
-          timeOut:
-            status === "Clocked In" ? Timestamp.fromDate(new Date()) : null,
-        });
-
-        setAttendanceRecords((prevRecords) =>
-          prevRecords.map((record) =>
-            record.id === currentLogId
-              ? {
-                  ...record,
-                  status: status === "Clocked In" ? "Clocked Out" : status,
-                  timeOut: status === "Clocked In" ? new Date() : null,
-                }
-              : record
-          )
-        );
-        setStatus("Clocked Out");
-        stopTimer();
-      } catch (error) {
-        console.error("Error updating log before logout:", error);
-      }
-    }
-
-    localStorage.removeItem("rememberedEmployeeEmail");
-    localStorage.removeItem("employeeDocId");
-    navigate("/employee-login");
-  };
-
   const handleTimeIn = async () => {
     if (status === "Clocked Out") {
       try {
@@ -308,6 +217,8 @@ const EmployeeDashboard = () => {
     const docId = localStorage.getItem("employeeDocId");
     if (docId) {
       fetchAttendanceRecords(docId); // Refresh attendance records
+      setTimer(0); // Reset the timer to 0
+      stopTimer(); // Ensure the timer is stopped
     }
   };
 
@@ -345,209 +256,110 @@ const EmployeeDashboard = () => {
       : "";
   };
 
-  const handleCheckOrder = async (orderId) => {
-    alert("Status: Notifying the Customer");
-    const orderRef = doc(db, "order", orderId);
-    await updateDoc(orderRef, {
-      status: "Brew-tiful News! Your Drink’s Ready for You!",
-    });
-  };
-
-  const handleNotificationClick = (orderId, userId) => {
-    setSelectedOrderId(orderId);
-    setSelectedUserId(userId);
-    setIsModalOpen(true);
-  };
-
-  const formatOrderDate = (date) => {
-    if (!date) return "N/A";
-    return (
-      date.toLocaleString("en-US", {
-        timeZone: "Asia/Singapore",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }) + " UTC+8"
-    );
-  };
-
-  const handleSendNotification = async (message) => {
-    if (!selectedUserId) return;
-
-    const notificationRef = collection(db, "notification");
-    const timeSend = new Date();
-
-    await addDoc(notificationRef, {
-      message: message,
-      uid: selectedUserId,
-      timeSend: timeSend,
-    });
-
-    alert(
-      `Notification sent to User ID: ${selectedUserId}\nMessage: ${message}`
-    ); // Fixed variable name
-    setIsModalOpen(false);
-  };
-
-  const renderUpcomingOrders = () => (
-    <div className="mb-6">
-      <h2 className="text-xl font-bold mb-4">Upcoming Orders</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b text-left">Order ID</th>
-              <th className="py-2 px-4 border-b text-left">Product Name</th>
-              <th className="py-2 px-4 border-b text-left">Total Amount</th>
-              <th className="py-2 px-4 border-b text-left">Order Date</th>
-              <th className="py-2 px-4 border-b text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {upcomingOrders.length > 0 ? (
-              upcomingOrders.map((order) => (
-                <tr key={order.id}>
-                  <td className="py-2 px-4 border-b">{order.id}</td>
-                  <td className="py-2 px-4 border-b">{order.productName}</td>
-                  <td className="py-2 px-4 border-b">
-                    P{order.totalPrice.toFixed(2)}
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    {formatOrderDate(order.createdAt)}
-                  </td>
-                  <td className="flex items-center justify-center py-2 px-4 border-b space-x-2">
-                    <FaCheckSquare
-                      className="text-blue-500 cursor-pointer hover:text-blue-600"
-                      onClick={() => handleCheckOrder(order.id)}
-                    />
-                    <FaBell
-                      className="text-green-500 cursor-pointer hover:text-green-600"
-                      onClick={() =>
-                        handleNotificationClick(order.id, order.uid)
-                      }
-                    />
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="py-2 px-4 border-b text-center">
-                  No upcoming orders found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-brown-500 p-4 flex justify-between items-center">
-        <div className="text-white font-semibold italic text-lg">
-          Welcome, {employeeName}
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-white hover:text-brown-300 flex items-center space-x-2"
-        >
-          <FaSignOutAlt />
-        </button>
-      </nav>
-
-      <div className="container mx-auto p-4">
-        {renderUpcomingOrders()} {/* Render upcoming orders here */}
-        <div className="flex flex-wrap justify-center sm:justify-between space-x-4 mb-4">
-          <button
-            onClick={handleTimeIn}
-            className="bg-green-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-green-600 disabled:opacity-50"
-            disabled={status !== "Clocked Out"}
-          >
-            <FaPlay className="text-lg" />
-            <span className="hidden sm:inline">Time In</span>
-          </button>
-          <button
-            onClick={handleBreakStart}
-            className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
-            disabled={status !== "Clocked In"}
-          >
-            <FaPause className="text-lg" />
-            <span className="hidden sm:inline">Break Start</span>
-          </button>
-          <button
-            onClick={handleBreakEnd}
-            className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
-            disabled={status !== "On Break"}
-          >
-            <FaPlay className="text-lg" />
-            <span className="hidden sm:inline">Break End</span>
-          </button>
-          <button
-            onClick={handleTimeOut}
-            className="bg-red-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-red-600 disabled:opacity-50"
-            disabled={status === "Clocked Out"}
-          >
-            <FaStop className="text-lg" />
-            <span className="hidden sm:inline">Time Out</span>
-          </button>
-          <button
-            onClick={handleDone}
-            className="bg-blue-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-blue-600"
-          >
-            <span className="hidden sm:inline">Done</span>
-          </button>
-        </div>
-        <div className="text-center text-2xl font-bold mb-4">
-          Timer: {formatTime(timer)}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-300">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b text-left">Date</th>
-                <th className="py-2 px-4 border-b text-left">Time In</th>
-                <th className="py-2 px-4 border-b text-left">Break Start</th>
-                <th className="py-2 px-4 border-b text-left">Break End</th>
-                <th className="py-2 px-4 border-b text-left">Time Out</th>
-                <th className="py-2 px-4 border-b text-left">Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {attendanceRecords.map((record) => (
-                <tr key={record.id}>
-                  <td className="py-2 px-4 border-b">
-                    {formatDate(record.timeIn)}
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    {formatTimeOnly(record.timeIn)}
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    {formatTimeOnly(record.breakStart)}
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    {formatTimeOnly(record.breakEnd)}
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    {formatTimeOnly(record.timeOut)}
-                  </td>
-                  <td className="py-2 px-4 border-b">{record.status}</td>
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* Sidebar */}
+      <EmployeeSidebar />
+      {/* Main Content */}
+      <div className="flex-1 p-4 sm:ml-64">
+        <div className="container mx-auto">
+          <h2 className="text-2xl font-bold mb-4">Welcome, {employeeName}</h2>
+          <div className="flex flex-wrap justify-center sm:justify-between space-x-4 mb-4">
+            <button
+              onClick={handleTimeIn}
+              className="bg-green-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-green-600 disabled:opacity-50"
+              disabled={status !== "Clocked Out"}
+            >
+              <FaPlay className="text-lg" />
+              <span className="hidden sm:inline">Time In</span>
+            </button>
+            <button
+              onClick={handleBreakStart}
+              className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
+              disabled={status !== "Clocked In"}
+            >
+              <FaPause className="text-lg" />
+              <span className="hidden sm:inline">Break Start</span>
+            </button>
+            <button
+              onClick={handleBreakEnd}
+              className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
+              disabled={status !== "On Break"}
+            >
+              <FaPlay className="text-lg" />
+              <span className="hidden sm:inline">Break End</span>
+            </button>
+            <button
+              onClick={handleTimeOut}
+              className="bg-red-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-red-600 disabled:opacity-50"
+              disabled={status === "Clocked Out"}
+            >
+              <FaStop className="text-lg" />
+              <span className="hidden sm:inline">Time Out</span>
+            </button>
+            <button
+              onClick={handleDone}
+              className="bg-blue-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-blue-600"
+            >
+              <span className="hidden sm:inline">Done</span>
+            </button>
+          </div>
+          <div className="text-center text-2xl font-bold mb-4">
+            Timer: {formatTime(timer)}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white rounded-lg shadow-md">
+              <thead className="bg-brown-500 text-white">
+                <tr>
+                  <th className="py-3 px-4 text-left">Date</th>
+                  <th className="py-3 px-4 text-left">Time In</th>
+                  <th className="py-3 px-4 text-left">Break Start</th>
+                  <th className="py-3 px-4 text-left">Break End</th>
+                  <th className="py-3 px-4 text-left">Time Out</th>
+                  <th className="py-3 px-4 text-left">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {attendanceRecords.map((record, index) => (
+                  <tr
+                    key={index}
+                    className={`border-b ${
+                      index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                    }`}
+                  >
+                    <td className="py-3 px-4">{formatDate(record.timeIn)}</td>
+                    <td className="py-3 px-4">
+                      {formatTimeOnly(record.timeIn)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {formatTimeOnly(record.breakStart)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {formatTimeOnly(record.breakEnd)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {formatTimeOnly(record.timeOut)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          record.status === "Clocked In"
+                            ? "bg-green-100 text-green-600"
+                            : record.status === "On Break"
+                            ? "bg-yellow-100 text-yellow-600"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {record.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <NotificationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSend={handleSendNotification}
-      />
     </div>
   );
 };

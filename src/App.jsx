@@ -9,6 +9,8 @@ import EmployeeAccount from "./EmployeeAccount";
 import EmployeeLogin from "./EmployeeLogin";
 import EmployeeDashboard from "./EmployeeDashboard";
 import Order from "./Order";
+import UpcomingOrders from "./UpcomingOrder";
+import EmployeeInventory from "./EmployeeInventory";
 
 // Generate more dummy data for the past 60 days
 const salesData = Array.from({ length: 150 }, (_, i) => {
@@ -34,9 +36,11 @@ function App() {
         <Route path="/employee-logs" element={<EmployeeLog />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/employee-account" element={<EmployeeAccount />} />
+        <Route path="/orders" element={<Order />} />
         <Route path="/employee-login" element={<EmployeeLogin />} />
         <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
-        <Route path="/orders" element={<Order />} />
+        <Route path="/upcoming-orders" element={<UpcomingOrders />} />
+        <Route path="/employee-inventory" element={<EmployeeInventory />} />
       </Routes>
     </Router>
   );

@@ -8,15 +8,21 @@ import {
   FaEyeSlash,
 } from "react-icons/fa";
 import Sidebar from "./Sidebar";
-import { db } from "./config/firebase"; // Ensure this path is correct for your project setup
+import { db } from "./config/firebase";
 import {
   collection,
   getDocs,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   doc,
 } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  deleteUser,
+} from "firebase/auth";
+import { auth } from "./config/firebase";
 
 const EmployeeAccount = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,12 +39,8 @@ const EmployeeAccount = () => {
   });
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [passwordError, setPasswordError] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const employeesCollectionRef = collection(db, "accounts");
 
@@ -69,18 +71,27 @@ const EmployeeAccount = () => {
       return;
     }
 
-    const fullName = `${newEmployee.firstName} ${newEmployee.lastName}`;
-
-    const newEmployeeData = {
-      name: fullName,
-      email: newEmployee.email,
-      position: newEmployee.position,
-      password: newEmployee.password,
-    };
-
     try {
-      const docRef = await addDoc(employeesCollectionRef, newEmployeeData);
-      setEmployees([...employees, { ...newEmployeeData, id: docRef.id }]);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        newEmployee.email,
+        newEmployee.password
+      );
+
+      const uid = userCredential.user.uid;
+
+      const newEmployeeData = {
+        firstName: newEmployee.firstName,
+        lastName: newEmployee.lastName,
+        email: newEmployee.email,
+        position: newEmployee.position,
+        createdAt: new Date(),
+        uid: uid,
+      };
+
+      await setDoc(doc(employeesCollectionRef, uid), newEmployeeData);
+
+      setEmployees([...employees, { ...newEmployeeData, id: uid }]);
       setShowAddForm(false);
       setNewEmployee({
         firstName: "",
@@ -93,27 +104,23 @@ const EmployeeAccount = () => {
       setPasswordError("");
     } catch (error) {
       console.error("Error adding employee: ", error);
+      if (error.code === "auth/email-already-in-use") {
+        setPasswordError("Email already in use.");
+      } else {
+        setPasswordError("Error creating account.");
+      }
     }
   };
 
   const handleEditEmployee = async () => {
-    if (newPassword && newPassword !== confirmNewPassword) {
-      setPasswordError("New passwords do not match.");
-      return;
-    }
-
     try {
       const employeeDoc = doc(db, "accounts", selectedEmployee.id);
       const updatedEmployeeData = {
-        name: `${selectedEmployee.firstName} ${selectedEmployee.lastName}`,
+        firstName: selectedEmployee.firstName,
+        lastName: selectedEmployee.lastName,
         email: selectedEmployee.email,
         position: selectedEmployee.position,
       };
-
-      // Update the password only if a new one is provided
-      if (newPassword) {
-        updatedEmployeeData.password = newPassword;
-      }
 
       await updateDoc(employeeDoc, updatedEmployeeData);
 
@@ -125,27 +132,49 @@ const EmployeeAccount = () => {
       setEmployees(updatedEmployees);
       setShowEditForm(false);
       setSelectedEmployee(null);
-      setNewPassword("");
-      setConfirmNewPassword("");
       setPasswordError("");
     } catch (error) {
       console.error("Error editing employee: ", error);
     }
   };
-
   const handleDelete = async (employee) => {
     try {
-      const employeeDoc = doc(db, "accounts", employee.id);
+      // First, delete the employee document from Firestore
+      const employeeDoc = doc(db, "accounts", employee.uid); // Use the UID stored in Firestore
       await deleteDoc(employeeDoc);
-      setEmployees(employees.filter((e) => e.id !== employee.id));
+
+      // Then, delete the user from Firebase Authentication
+      const user = auth.currentUser; // Get the currently signed-in user
+
+      if (user && user.uid === employee.uid) {
+        // Only delete if the current user matches the employee's UID
+        await deleteUser(user);
+      } else {
+        // If the user is not signed in, you cannot delete them directly
+        console.error("User  not signed in or does not match.");
+        alert("User  not signed in or does not match.");
+      }
+
+      // Update the local employees state
+      setEmployees(employees.filter((e) => e.uid !== employee.uid));
     } catch (error) {
       console.error("Error deleting employee: ", error);
+      alert("Error deleting employee. Please try again.");
+    }
+  };
+  const sendResetPasswordEmail = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("Password reset email sent!");
+    } catch (error) {
+      console.error("Error sending password reset email: ", error);
+      alert("Error sending password reset email.");
     }
   };
 
   const filteredEmployees = employees.filter((employee) => {
-    const id = employee.id || ""; // Fallback to an empty string if undefined
-    const name = employee.name || "";
+    const id = employee.id || "";
+    const name = `${employee.firstName} ${employee.lastName}` || "";
     const email = employee.email || "";
     const position = employee.position || "";
 
@@ -158,8 +187,7 @@ const EmployeeAccount = () => {
   });
 
   const handleEdit = (employee) => {
-    const [firstName, lastName] = employee.name.split(" ");
-    setSelectedEmployee({ ...employee, firstName, lastName });
+    setSelectedEmployee(employee);
     setShowEditForm(true);
   };
 
@@ -203,7 +231,9 @@ const EmployeeAccount = () => {
               {filteredEmployees.map((employee, index) => (
                 <tr key={index} className="border-b">
                   <td className="py-3 px-4">{employee.id}</td>
-                  <td className="py-3 px-4">{employee.name}</td>
+                  <td className="py-3 px-4">
+                    {employee.firstName} {employee.lastName}
+                  </td>
                   <td className="py-3 px-4">{employee.email}</td>
                   <td className="py-3 px-4">{employee.position}</td>
                   <td className="py-3 px-4 flex space-x-4">
@@ -387,18 +417,9 @@ const EmployeeAccount = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Email
               </label>
-              <input
-                type="email"
-                name="email"
-                value={selectedEmployee.email}
-                onChange={(e) =>
-                  setSelectedEmployee({
-                    ...selectedEmployee,
-                    email: e.target.value,
-                  })
-                }
-                className="mt-1 p-2 border rounded-lg w-full"
-              />
+              <p className="mt-1 p-2 border rounded-lg w-full bg-gray-100 text-gray-700 cursor-pointer">
+                {selectedEmployee.email}
+              </p>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
@@ -421,59 +442,26 @@ const EmployeeAccount = () => {
                 {/* Add more positions as needed */}
               </select>
             </div>
-            <div className="mb-4 relative">
-              <label className="block text-sm font-medium text-gray-700">
-                New Password (optional)
-              </label>
-              <input
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 p-2 border rounded-lg w-full pr-10"
-              />
+            <div className="flex justify-center space-between">
               <button
-                type="button"
-                className="absolute inset-y-11 right-0 flex items-center px-3"
-                onClick={() => setShowNewPassword(!showNewPassword)}
+                onClick={() => sendResetPasswordEmail(selectedEmployee.email)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
               >
-                {showNewPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            <div className="mb-4 relative">
-              <label className="block text-sm font-medium text-gray-700">
-                Confirm New Password (optional)
-              </label>
-              <input
-                type={showConfirmNewPassword ? "text" : "password"}
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                className="mt-1 p-2 border rounded-lg w-full pr-10"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-11 right-0 flex items-center px-3"
-                onClick={() =>
-                  setShowConfirmNewPassword(!showConfirmNewPassword)
-                }
-              >
-                {showConfirmNewPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            {passwordError && (
-              <p className="text-red-500 text-sm mb-4">{passwordError}</p>
-            )}
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowEditForm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
+                Send Reset Password
               </button>
               <button
                 onClick={handleEditEmployee}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 ml-4"
               >
                 Save Changes
+              </button>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
               </button>
             </div>
           </div>

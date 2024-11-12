@@ -3,7 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import logo from "./assets/logo.png";
 import "./Login.css";
-import { db } from "./config/firebase";
+import { db, auth } from "./config/firebase"; // Make sure to import auth
+import { signInWithEmailAndPassword } from "firebase/auth"; // Import signInWithEmailAndPassword
 import { getDocs, query, where, collection } from "firebase/firestore";
 
 const EmployeeLogin = () => {
@@ -55,28 +56,28 @@ const EmployeeLogin = () => {
     setError("");
 
     try {
-      const q = query(collection(db, "accounts"), where("email", "==", email));
+      // Authenticate user with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Check if the user exists in Firestore
+      const q = query(collection(db, "accounts"), where("uid", "==", user.uid));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const employeeDoc = querySnapshot.docs[0];
-        const employeeData = employeeDoc.data();
+        // User exists in Firestore, proceed to navigate
+        localStorage.setItem("rememberedEmployeeEmail", email);
+        localStorage.setItem("employeeDocId", querySnapshot.docs[0].id); // Store the document ID
 
-        if (employeeData.password === password) {
-          setIsLoading(false);
-
-          // Save email and document ID to local storage
-          localStorage.setItem("rememberedEmployeeEmail", email);
-          localStorage.setItem("employeeDocId", employeeDoc.id);
-
-          // Pass the document ID to the next component
-          navigate("/employee-dashboard", {
-            state: { employeeDocId: employeeDoc.id },
-          });
-        } else {
-          handleFailedAttempt();
-        }
+        navigate("/employee-dashboard", {
+          state: { employeeDocId: querySnapshot.docs[0].id },
+        });
       } else {
+        // User does not exist in Firestore
         handleFailedAttempt();
       }
     } catch (error) {
@@ -112,7 +113,7 @@ const EmployeeLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown-400">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown -400">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-96">
         <div className="flex justify-center mb-4">
           <img src={logo} alt="Logo" className="h-20 w-auto" />
