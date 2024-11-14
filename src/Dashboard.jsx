@@ -171,7 +171,7 @@ const Dashboard = () => {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       <Sidebar />
-      <div className="flex-1 flex flex-col pt-16 pr-5 pl-5 pb-5 lg:ml-64">
+      <div className="flex-1 flex flex-col pt-5 pr-5 pl-5 pb-5 lg:ml-64">
         <div className="bg-gradient-to-r from-brown-500 to-brown-400 p-6 rounded-t-2xl">
           <div className="bg-white p-8 rounded-2xl shadow-2xl w-full lg:w-96">
             <h2 className="text-3xl mb-4 text-center font-bold text-brown-500">

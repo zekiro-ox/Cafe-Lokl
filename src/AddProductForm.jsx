@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { FaUpload } from "react-icons/fa";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "./config/firebase"; // Ensure the correct path
+import { db } from "./config/firebase";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; // Ensure the correct path
 
 const AddProductForm = ({ onAddProduct }) => {
   const [name, setName] = useState("");
@@ -50,11 +62,35 @@ const AddProductForm = ({ onAddProduct }) => {
   };
 
   const handleImageChange = (event) => {
-    setImage(event.target.files[0]);
+    const file = event.target.files[0];
+    if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+      setImage(file);
+    } else {
+      notify("Please upload a valid image file (JPG or PNG).", "invalid_image");
+      setImage(null);
+    }
   };
-
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    if (!name || !category || !subCategory || !price || !description) {
+      notify("Please fill in all required fields.", "missing_fields");
+      return;
+    }
+    const validIngredients = ingredients.filter(
+      (ingredient) =>
+        ingredient.name.trim() !== "" &&
+        ingredient.price !== "" &&
+        ingredient.recommendedAmount !== ""
+    );
+
+    if (validIngredients.length === 0) {
+      notify(
+        "Please add at least one valid ingredient.",
+        "invalid_ingredients"
+      );
+      return;
+    }
 
     const newProduct = {
       name,
@@ -73,6 +109,7 @@ const AddProductForm = ({ onAddProduct }) => {
     };
 
     onAddProduct(newProduct);
+    notify("Product added successfully!", "product_added", "success");
   };
 
   return (
@@ -80,6 +117,7 @@ const AddProductForm = ({ onAddProduct }) => {
       onSubmit={handleSubmit}
       className="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto"
     >
+      <ToastContainer />
       <h2 className="text-xl font-semibold mb-4">Add Product</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
@@ -201,7 +239,7 @@ const AddProductForm = ({ onAddProduct }) => {
           <label className="block text-sm font-medium mb-1">Image</label>
           <input
             type="file"
-            accept="image/*"
+            accept=".jpg, .jpeg, .png"
             onChange={handleImageChange}
             className="p-2 border rounded-lg w-full"
           />

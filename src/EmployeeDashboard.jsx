@@ -12,7 +12,19 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 // Import the modal
-import EmployeeSidebar from "./EmployeeSidebar"; // Import the sidebar// Import the UpcomingOrders component
+import EmployeeSidebar from "./EmployeeSidebar";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; // Import the sidebar// Import the UpcomingOrders component
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +34,7 @@ const EmployeeDashboard = () => {
   const [timer, setTimer] = useState(0);
   const [currentLogId, setCurrentLogId] = useState(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isSessionActive, setIsSessionActive] = useState(false);
   // Store user ID
   const timerRef = useRef(null);
 
@@ -97,8 +110,24 @@ const EmployeeDashboard = () => {
 
     return () => unsubscribe();
   };
+
+  const hasSessionToday = () => {
+    const today = new Date();
+    return attendanceRecords.some((record) => {
+      const recordDate = record.timeIn.toDate();
+      return (
+        recordDate.getDate() === today.getDate() &&
+        recordDate.getMonth() === today.getMonth() &&
+        recordDate.getFullYear() === today.getFullYear()
+      );
+    });
+  };
   const handleTimeIn = async () => {
-    if (status === "Clocked Out") {
+    if (status === "Clocked Out" && !isSessionActive) {
+      if (hasSessionToday()) {
+        notify("You have already clocked in for today.", "already_clocked_in"); // Toast for already clocked in
+        return;
+      }
       try {
         const docId = localStorage.getItem("employeeDocId");
         const logRef = await addDoc(collection(db, "timelogs", docId, "logs"), {
@@ -112,15 +141,18 @@ const EmployeeDashboard = () => {
 
         setCurrentLogId(logRef.id);
         setStatus("Clocked In");
+        setIsSessionActive(true); // Start the session
         startTimer();
+        notify("Clocked In successfully!", "clock_in_success", "success"); // Toast for successful clock in
       } catch (error) {
         console.error("Error recording Time In:", error);
+        notify("Error recording Time In. Please try again.", "clock_in_error"); // Toast for clock in error
       }
     }
   };
 
   const handleBreakStart = async () => {
-    if (status === "Clocked In") {
+    if (status === "Clocked In" && isSessionActive) {
       try {
         const docId = localStorage.getItem("employeeDocId");
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
@@ -142,16 +174,22 @@ const EmployeeDashboard = () => {
               : record
           )
         );
+        fetchAttendanceRecords(docId);
         setStatus("On Break");
         stopTimer();
+        notify("Break started!", "break_start_success", "success"); // Toast for successful break start
       } catch (error) {
         console.error("Error recording Break Start:", error);
+        notify(
+          "Error recording Break Start. Please try again.",
+          "break_start_error"
+        ); // Toast for break start error
       }
     }
   };
 
   const handleBreakEnd = async () => {
-    if (status === "On Break") {
+    if (status === "On Break" && isSessionActive) {
       try {
         const docId = localStorage.getItem("employeeDocId");
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
@@ -173,16 +211,29 @@ const EmployeeDashboard = () => {
               : record
           )
         );
+
+        fetchAttendanceRecords(docId);
         setStatus("Clocked In");
         startTimer();
+        notify("Break ended!", "break_end_success", "success"); // Toast for successful break end
       } catch (error) {
         console.error("Error recording Break End:", error);
+        notify(
+          "Error recording Break End. Please try again.",
+          "break_end_error"
+        ); // Toast for break end error
       }
     }
   };
 
+  const areFieldsComplete = (record) => {
+    return (
+      record.timeIn && record.timeOut && (!record.breakStart || record.breakEnd)
+    );
+  };
+
   const handleTimeOut = async () => {
-    if (status === "Clocked In" || status === "On Break") {
+    if ((status === "Clocked In" || status === "On Break") && isSessionActive) {
       try {
         const docId = localStorage.getItem("employeeDocId");
         const logRef = doc(db, "timelogs", docId, "logs", currentLogId);
@@ -197,29 +248,27 @@ const EmployeeDashboard = () => {
           timeOut: Timestamp.fromDate(new Date()),
         });
 
-        setAttendanceRecords((prevRecords) =>
-          prevRecords.map((record) =>
-            record.id === currentLogId
-              ? { ...record, status: "Clocked Out", timeOut: new Date() }
-              : record
-          )
-        );
+        fetchAttendanceRecords(docId);
         setStatus("Clocked Out");
+        setIsSessionActive(false);
         stopTimer();
         setCurrentLogId(null);
+        notify("Clocked Out successfully!", "clock_out_success", "success"); // Toast for successful clock out
       } catch (error) {
         console.error("Error recording Time Out:", error);
+        notify(
+          "Error recording Time Out. Please try again.",
+          "clock_out_error"
+        ); // Toast for clock out error
       }
     }
   };
 
-  const handleDone = () => {
-    const docId = localStorage.getItem("employeeDocId");
-    if (docId) {
-      fetchAttendanceRecords(docId); // Refresh attendance records
-      setTimer(0); // Reset the timer to 0
-      stopTimer(); // Ensure the timer is stopped
-    }
+  const isTimeOutDisabled = () => {
+    const currentRecord = attendanceRecords.find(
+      (record) => record.id === currentLogId
+    );
+    return !currentRecord || !currentRecord.timeIn || status === "Clocked Out";
   };
 
   const startTimer = () => {
@@ -262,13 +311,16 @@ const EmployeeDashboard = () => {
       <EmployeeSidebar />
       {/* Main Content */}
       <div className="flex-1 p-4 sm:ml-64">
+        <ToastContainer />
         <div className="container mx-auto">
-          <h2 className="text-2xl font-bold mb-4">Welcome, {employeeName}</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            Welcome, <em>{employeeName}</em>
+          </h2>
           <div className="flex flex-wrap justify-center sm:justify-between space-x-4 mb-4">
             <button
               onClick={handleTimeIn}
               className="bg-green-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-green-600 disabled:opacity-50"
-              disabled={status !== "Clocked Out"}
+              disabled={status !== "Clocked Out" || isSessionActive}
             >
               <FaPlay className="text-lg" />
               <span className="hidden sm:inline">Time In</span>
@@ -276,7 +328,7 @@ const EmployeeDashboard = () => {
             <button
               onClick={handleBreakStart}
               className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
-              disabled={status !== "Clocked In"}
+              disabled={status !== "Clocked In" || !isSessionActive}
             >
               <FaPause className="text-lg" />
               <span className="hidden sm:inline">Break Start</span>
@@ -284,7 +336,7 @@ const EmployeeDashboard = () => {
             <button
               onClick={handleBreakEnd}
               className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
-              disabled={status !== "On Break"}
+              disabled={status !== "On Break" || !isSessionActive}
             >
               <FaPlay className="text-lg" />
               <span className="hidden sm:inline">Break End</span>
@@ -292,20 +344,11 @@ const EmployeeDashboard = () => {
             <button
               onClick={handleTimeOut}
               className="bg-red-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-red-600 disabled:opacity-50"
-              disabled={status === "Clocked Out"}
+              disabled={!isSessionActive || isTimeOutDisabled()}
             >
               <FaStop className="text-lg" />
               <span className="hidden sm:inline">Time Out</span>
             </button>
-            <button
-              onClick={handleDone}
-              className="bg-blue-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-blue-600"
-            >
-              <span className="hidden sm:inline">Done</span>
-            </button>
-          </div>
-          <div className="text-center text-2xl font-bold mb-4">
-            Timer: {formatTime(timer)}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white rounded-lg shadow-md">

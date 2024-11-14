@@ -6,6 +6,18 @@ import "./Login.css";
 import { db, auth } from "./config/firebase"; // Make sure to import auth
 import { signInWithEmailAndPassword } from "firebase/auth"; // Import signInWithEmailAndPassword
 import { getDocs, query, where, collection } from "firebase/firestore";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+};
 
 const EmployeeLogin = () => {
   const navigate = useNavigate();
@@ -48,7 +60,10 @@ const EmployeeLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLocked) {
-      setError("Too many failed attempts. Please try again later.");
+      notify(
+        "Too many failed attempts. Please try again later.",
+        "too_many_attempts"
+      ); // Toast for too many attempts
       return;
     }
 
@@ -72,10 +87,12 @@ const EmployeeLogin = () => {
         // User exists in Firestore, proceed to navigate
         localStorage.setItem("rememberedEmployeeEmail", email);
         localStorage.setItem("employeeDocId", querySnapshot.docs[0].id); // Store the document ID
-
-        navigate("/employee-dashboard", {
-          state: { employeeDocId: querySnapshot.docs[0].id },
-        });
+        notify("Login successful! Redirecting...", "login-success", "success");
+        setTimeout(() => {
+          navigate("/employee-dashboard", {
+            state: { employeeDocId: querySnapshot.docs[0].id },
+          });
+        }, 2000);
       } else {
         // User does not exist in Firestore
         handleFailedAttempt();
@@ -93,9 +110,16 @@ const EmployeeLogin = () => {
       const newAttempts = prevAttempts + 1;
       if (newAttempts >= 3) {
         setIsLocked(true);
-        setError("Too many failed attempts. Please try again later.");
+
+        notify(
+          "Too many failed attempts. Please try again later.",
+          "too_many_attempts"
+        ); // Toast for too many attempts
       } else {
-        setError("Invalid email or password. Please try again.");
+        notify(
+          "Invalid email or password. Please try again.",
+          "invalid_credentials"
+        ); // Toast for invalid credentials
       }
       return newAttempts;
     });
@@ -113,7 +137,8 @@ const EmployeeLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown -400">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown-300">
+      <ToastContainer />
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-96">
         <div className="flex justify-center mb-4">
           <img src={logo} alt="Logo" className="h-20 w-auto" />
@@ -169,10 +194,6 @@ const EmployeeLogin = () => {
               )}
             </button>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {attempts > 0 && !isLocked && (
-            <p className="text-sm text-gray-600">Attempt {attempts} of 3</p>
-          )}
           {isLocked && (
             <p className="text-sm text-gray-600">
               Locked! Try again in {formatTime(remainingTime)}

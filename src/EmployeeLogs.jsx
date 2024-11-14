@@ -3,6 +3,18 @@ import { FaSearch } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "./config/firebase";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; //
 
 const EmployeeLog = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +58,7 @@ const EmployeeLog = () => {
             return {
               id: doc.id,
               ...data,
-              employeeName: employees[selectedEmployeeId]?.name,
+              employeeName: `${employees[selectedEmployeeId]?.firstName} ${employees[selectedEmployeeId]?.lastName}`,
               timeIn: data.timeIn ? data.timeIn.toDate() : null,
               timeOut: data.timeOut ? data.timeOut.toDate() : null,
               breakStart: data.breakStart ? data.breakStart.toDate() : null,
@@ -77,25 +89,30 @@ const EmployeeLog = () => {
 
   const handleSaveTimeOut = async (id) => {
     if (!newTimeOut) {
-      alert("Please select a time before saving.");
+      notify("Please select a time before saving.", "missing_fields");
       return;
     }
 
     try {
       const logRef = doc(db, "timelogs", selectedEmployeeId, "logs", id);
       const [hours, minutes] = newTimeOut.split(":");
-      const updatedTimeOut = new Date();
+      const updatedTimeOut = new Date(); // Create a new date object
       updatedTimeOut.setHours(hours, minutes, 0, 0);
 
-      await updateDoc(logRef, {
-        timeOut: updatedTimeOut,
-      });
+      // Convert to UTC before saving to Firestore
+      const utcTimeOut = new Date(
+        updatedTimeOut.getTime() - updatedTimeOut.getTimezoneOffset() * 60000
+      );
 
+      await updateDoc(logRef, {
+        timeOut: utcTimeOut,
+      });
       setLogs((prevLogs) =>
         prevLogs.map((log) =>
-          log.id === id ? { ...log, timeOut: updatedTimeOut } : log
+          log.id === id ? { ...log, timeOut: utcTimeOut } : log
         )
       );
+      notify("Updated!", "timeOut_adjusted", "success");
       setEditLogId(null);
       setNewTimeOut("");
     } catch (error) {
@@ -114,10 +131,11 @@ const EmployeeLog = () => {
 
   const formatTime = (date) => {
     return date
-      ? new Date(date).toLocaleTimeString([], {
+      ? new Intl.DateTimeFormat([], {
           hour: "2-digit",
           minute: "2-digit",
-        })
+          timeZone: "Asia/Singapore", // Ensure the time is displayed in UTC+8
+        }).format(new Date(date))
       : "";
   };
 
@@ -134,6 +152,7 @@ const EmployeeLog = () => {
     <div className="p-6 lg:ml-64 bg-gray-100 min-h-screen">
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
+        <ToastContainer />
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-bold mb-4 md:mb-0">Employee Logs</h2>
           <div className="flex items-center space-x-4">
@@ -145,20 +164,11 @@ const EmployeeLog = () => {
                 <option value="">Select Employee</option>
                 {Object.keys(employees).map((employeeId) => (
                   <option key={employeeId} value={employeeId}>
-                    {employees[employeeId]?.name}
+                    {employees[employeeId]?.firstName}{" "}
+                    {employees[employeeId]?.lastName}
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search logs..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brown-500 w-full md:w-auto"
-              />
-              <FaSearch className="absolute top-3 left-2 text-gray-500" />
             </div>
           </div>
         </div>

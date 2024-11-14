@@ -18,6 +18,19 @@ import {
   collection,
 } from "firebase/firestore";
 
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const db = getFirestore();
@@ -63,7 +76,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLocked) {
-      setError("Too many failed attempts. Please try again later.");
+      notify("Too many failed attempts. Please try again later.", "locked");
       return;
     }
 
@@ -91,18 +104,23 @@ const Login = () => {
       } else {
         localStorage.removeItem("rememberedEmail");
       }
+      notify("Login successful! Redirecting...", "login-success", "success");
 
-      navigate("/dashboard");
+      // Delay navigation for the success toast
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
     } catch (error) {
       setIsLoading(false);
       setAttempts((prevAttempts) => {
         const newAttempts = prevAttempts + 1;
         if (newAttempts >= 3) {
           setIsLocked(true);
-          setError("Too many failed attempts. Please try again later.");
+          notify("Too many failed attempts. Please try again later.", "locked");
         } else {
-          setError(
-            error.message || "Invalid email or password. Please try again."
+          notify(
+            error.message || "Invalid email or password. Please try again.",
+            "login_error"
           );
         }
         return newAttempts;
@@ -120,7 +138,7 @@ const Login = () => {
   };
   const handleForgotPassword = async () => {
     if (!email) {
-      setError("Please enter your email address.");
+      notify("Please enter your email address.", "empty_email");
       return;
     }
 
@@ -139,9 +157,16 @@ const Login = () => {
 
       // If we found the document, send the password reset email
       await sendPasswordResetEmail(auth, email);
-      setError("Password reset email sent! Please check your inbox.");
+      notify(
+        "Password reset email sent! Please check your inbox.",
+        "reset_email_success",
+        "success"
+      );
     } catch (error) {
-      setError(error.message || "Failed to send password reset email.");
+      notify(
+        error.message || "Failed to send password reset email.",
+        "reset_email_error"
+      );
       console.error("Error sending password reset email:", error);
     }
   };
@@ -154,7 +179,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown-400">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-brown-500 to-brown-300">
+      <ToastContainer />
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-96">
         <div className="flex justify-center mb-4">
           <img src={logo} alt="Logo" className="h-20 w-auto" />
@@ -226,10 +252,6 @@ const Login = () => {
               Remember me
             </label>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {attempts > 0 && !isLocked && (
-            <p className="text-sm text-gray-600">Attempt {attempts} of 3</p>
-          )}
           {isLocked && (
             <p className="text-sm text-gray-600">
               Locked! Try again in {formatTime(remainingTime)}

@@ -7,17 +7,32 @@ import {
   updateDoc,
   doc,
   addDoc,
+  getDocs,
 } from "firebase/firestore";
 import NotificationModal from "./NotificationModal";
-import EmployeeSidebar from "./EmployeeSidebar"; // Import the sidebar component
+import EmployeeSidebar from "./EmployeeSidebar";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; // Import the sidebar component
 
 const UpcomingOrders = () => {
   const [upcomingOrders, setUpcomingOrders] = useState([]);
+  const [historyOrders, setHistoryOrders] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [view, setView] = useState("upcoming");
 
   const statuses = [
     "Order confirmed! It will take 15 mins before availability for pick up",
@@ -57,15 +72,38 @@ const UpcomingOrders = () => {
 
     return () => unsubscribe();
   };
+  const fetchHistoryOrders = async () => {
+    try {
+      const historyCollectionRef = collection(db, "history");
+      const historyCollectionSnapshot = await getDocs(historyCollectionRef);
+
+      const fetchedHistoryOrders = historyCollectionSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        const createdAt = data.createdAt ? data.createdAt.toDate() : null;
+
+        return {
+          id: doc.id,
+          productName: data.productName || "",
+          ingredients: data.ingredients || [],
+          totalPrice: data.totalPrice,
+          createdAt: createdAt,
+        };
+      });
+
+      setHistoryOrders(fetchedHistoryOrders);
+    } catch (err) {
+      console.error("Error fetching history orders:", err);
+    }
+  };
 
   useEffect(() => {
     fetchUpcomingOrders();
+    fetchHistoryOrders(); // Fetch history orders on mount
   }, []);
-
   const handleCheckOrder = async () => {
     if (!selectedStatus || !selectedOrderId) return;
 
-    alert(`Status: ${selectedStatus}`);
+    notify(`Status: ${selectedStatus}`, "order_status", "success");
     const orderRef = doc(db, "order", selectedOrderId);
     await updateDoc(orderRef, {
       status: selectedStatus,
@@ -99,8 +137,10 @@ const UpcomingOrders = () => {
       timeSend: timeSend,
     });
 
-    alert(
-      `Notification sent to User ID: ${selectedUserId}\nMessage: ${message}`
+    notify(
+      `Notification sent to User ID: ${selectedUserId}\nMessage: ${message}`,
+      "notification_sent",
+      "success"
     );
     setIsModalOpen(false);
   };
@@ -120,6 +160,110 @@ const UpcomingOrders = () => {
       }) + " UTC+8"
     );
   };
+  const renderUpcomingOrdersTable = () => (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white rounded-lg shadow-md">
+        <thead className="bg-brown-500 text-white">
+          <tr>
+            <th className="py-3 px-4 text-left">Order ID</th>
+            <th className="py-3 px-4 text-left">Product Name</th>
+            <th className="py-3 px-4 text-left">Ingredients</th>
+            <th className="py-3 px-4 text-left">Special Remarks</th>
+            <th className="py-3 px-4 text-left">Total Amount</th>
+            <th className="py-3 px-4 text-left">Order Date</th>
+            <th className="py-3 px-4 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {upcomingOrders.length > 0 ? (
+            upcomingOrders.map((order) => (
+              <tr key={order.id} className="border-b">
+                <td className="py-3 px-4">{order.id}</td>
+                <td className="py-3 px-4">{order.productName}</td>
+                <td className="py-3 px-4">
+                  {Array.isArray(order.ingredients) && order.ingredients.length
+                    ? order.ingredients
+                        .map(
+                          (ingredient) =>
+                            `${ingredient.name} (Qty: ${ingredient.quantity})`
+                        )
+                        .join(", ")
+                    : "No ingredients available"}
+                </td>
+                <td className="py-3 px-4">{order.specialRemarks}</td>
+                <td className="py-3 px-4">P{order.totalPrice.toFixed(2)}</td>
+                <td className="py-3 px-4">
+                  {formatOrderDate(order.createdAt)}
+                </td>
+                <td className="py-3 px-4 flex justify-center space-x-4">
+                  <FaCheckSquare
+                    className="text-blue-500 cursor-pointer hover:text-blue-600"
+                    onClick={() => handleOpenStatusModal(order.id)}
+                  />
+                  <FaBell
+                    className="text-green-500 cursor-pointer hover:text-green-600"
+                    onClick={() => handleNotificationClick(order.id, order.uid)}
+                  />
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="py-4 px-4 text-center">
+                No upcoming orders found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderHistoryOrdersTable = () => (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white rounded-lg shadow-md">
+        <thead className="bg-brown-500 text-white">
+          <tr>
+            <th className="py-3 px-4 text-left">Order ID</th>
+            <th className="py-3 px-4 text-left">Product Name</th>
+            <th className="py-3 px-4 text-left">Ingredients</th>
+            <th className="py-3 px-4 text-left">Total Amount</th>
+            <th className="py-3 px-4 text-left">Order Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {historyOrders.length > 0 ? (
+            historyOrders.map((order) => (
+              <tr key={order.id} className="border-b">
+                <td className="py-3 px-4">{order.id}</td>
+                <td className="py-3 px-4">{order.productName}</td>
+                <td className="py-3 px-4">
+                  {Array.isArray(order.ingredients) && order.ingredients.length
+                    ? order.ingredients
+                        .map(
+                          (ingredient) =>
+                            `${ingredient.name} (Qty: ${ingredient.quantity})`
+                        )
+                        .join(", ")
+                    : "No ingredients available"}
+                </td>
+                <td className="py-3 px-4">P{order.totalPrice.toFixed(2)}</td>
+                <td className="py-3 px-4">
+                  {formatOrderDate(order.createdAt)}
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" className="py-4 px-4 text-center">
+                No history orders found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="flex flex-col sm:flex-row">
@@ -128,70 +272,30 @@ const UpcomingOrders = () => {
 
       {/* Main Content */}
       <div className="flex-1 p-6 lg:ml-64 bg-gray-100 min-h-screen">
+        <ToastContainer />
         <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
-          <h2 className="text-2xl font-bold mb-6">Upcoming Orders</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded-lg shadow-md">
-              <thead className="bg-brown-500 text-white">
-                <tr>
-                  <th className="py-3 px-4 text-left">Order ID</th>
-                  <th className="py-3 px-4 text-left">Product Name</th>
-                  <th className="py-3 px-4 text-left">Ingredients</th>
-                  <th className="py-3 px-4 text-left">Special Remarks</th>
-                  <th className="py-3 px-4 text-left">Total Amount</th>
-                  <th className="py-3 px-4 text-left">Order Date</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingOrders.length > 0 ? (
-                  upcomingOrders.map((order) => (
-                    <tr key={order.id} className="border-b">
-                      <td className="py-3 px-4">{order.id}</td>
-                      <td className="py-3 px-4">{order.productName}</td>
-                      <td className="py-3 px-4">
-                        {" "}
-                        {Array.isArray(order.ingredients) &&
-                        order.ingredients.length
-                          ? order.ingredients
-                              .map(
-                                (ingredient) =>
-                                  `${ingredient.name} (Qty: ${ingredient.quantity})`
-                              )
-                              .join(", ")
-                          : "No ingredients available"}
-                      </td>
-                      <td className="py-3 px-4">{order.specialRemarks}</td>
-                      <td className="py-3 px-4">
-                        P{order.totalPrice.toFixed(2)}
-                      </td>
-                      <td className="py-3 px-4">
-                        {formatOrderDate(order.createdAt)}
-                      </td>
-                      <td className="py-3 px-4 flex justify-center space-x-4">
-                        <FaCheckSquare
-                          className="text-blue-500 cursor-pointer hover:text-blue-600"
-                          onClick={() => handleOpenStatusModal(order.id)}
-                        />
-                        <FaBell
-                          className="text-green-500 cursor-pointer hover:text-green-600"
-                          onClick={() =>
-                            handleNotificationClick(order.id, order.uid)
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="py-4 px-4 text-center">
-                      No upcoming orders found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <h2 className="text-2xl font-bold mb-6">Orders</h2>
+          <div className="flex mb-4">
+            <button
+              className={`px-4 py-2 mr-2 rounded-lg ${
+                view === "upcoming" ? "bg-brown-500 text-white" : "bg-gray-200"
+              }`}
+              onClick={() => setView("upcoming")}
+            >
+              Upcoming Orders
+            </button>
+            <button
+              className={`px-4 py-2 ml-2 rounded-lg ${
+                view === "history" ? "bg-brown-500 text-white" : "bg-gray-200"
+              }`}
+              onClick={() => setView("history")}
+            >
+              Order History
+            </button>
           </div>
+          {view === "upcoming"
+            ? renderUpcomingOrdersTable()
+            : renderHistoryOrdersTable()}
         </div>
       </div>
       {/* Status Modal */}

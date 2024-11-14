@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
-import { storage, db } from "./config/firebase"; // Adjust path as necessary
+import { storage, db } from "./config/firebase";
+import { ToastContainer, toast } from "react-toastify"; // Adjust path as necessary
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
 
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; //
 const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
   const [name, setName] = useState(product.name || "");
   const [category, setCategory] = useState(product.category || "");
@@ -69,6 +80,12 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
 
   const handleImageChange = (event) => {
     setSelectedFile(event.target.files[0]);
+    if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+      setSelectedFile(file);
+    } else {
+      notify("Please upload a valid image file (JPG or PNG).", "invalid_image");
+      setSelectedFile(null);
+    }
   };
 
   const uploadProductImage = async (file) => {
@@ -79,6 +96,26 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!name || !category || !subCategory || !price || !description) {
+      notify("Please fill in all required fields.", "missing_fields");
+      return;
+    }
+
+    const validIngredients = ingredients.filter(
+      (ingredient) =>
+        ingredient.name.trim() !== "" &&
+        ingredient.price.trim() !== "" &&
+        ingredient.recommendedAmount.trim() !== ""
+    );
+
+    if (validIngredients.length === 0) {
+      notify(
+        "Please add at least one valid ingredient.",
+        "invalid_ingredients"
+      );
+      return;
+    }
     let imageURL = product.image; // Preserve existing image URL if no new image is uploaded
 
     if (selectedFile) {
@@ -86,6 +123,10 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
         imageURL = await uploadProductImage(selectedFile);
       } catch (error) {
         console.error("Error uploading image: ", error);
+        notify(
+          "Failed to upload image. Please try again.",
+          "upload_image_error"
+        );
         return; // Stop the submit process if image upload fails
       }
     }
@@ -111,8 +152,17 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
     try {
       await updateDoc(productDocRef, updatedProduct);
       onUpdateProduct({ ...updatedProduct, id: product.id }); // Include the ID in the updated product
+      notify(
+        "Product updated successfully!",
+        "update_product_success",
+        "success"
+      );
     } catch (error) {
       console.error("Error updating document: ", error);
+      notify(
+        "Failed to update product. Please try again.",
+        "update_product_error"
+      );
     }
   };
 
@@ -121,6 +171,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
       onSubmit={handleSubmit}
       className="p-6 bg-white shadow-lg rounded-lg max-w-4xl mx-auto"
     >
+      <ToastContainer />
       <h2 className="text-xl font-semibold mb-4">Edit Product</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
@@ -250,7 +301,7 @@ const EditProductForm = ({ product, onUpdateProduct, onCancel }) => {
           <label className="block text-sm font-medium mb-1">Image</label>
           <input
             type="file"
-            accept="image/*"
+            accept=".jpg, .jpeg, .png"
             onChange={handleImageChange}
             className="p-2 border rounded-lg w-full"
           />

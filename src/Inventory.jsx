@@ -18,7 +18,19 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "./config/firebase"; // Ensure the correct path
+import { db } from "./config/firebase";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+}; // Ensure t // Ensure the correct path
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,6 +78,13 @@ const Inventory = () => {
   };
 
   const handleAddItem = async () => {
+    if (!newItem.name || newItem.onHand < 0) {
+      notify(
+        "Please fill in all required fields and ensure 'On Hand' is not negative.",
+        "missing_fields"
+      );
+      return;
+    }
     const generatedProductId = generateProductId();
     const newItemWithId = {
       ...newItem,
@@ -84,8 +103,10 @@ const Inventory = () => {
         onHand: 0,
         type: selectedFolder,
       });
+      notify("Item added successfully!", "item_added", "success"); // Success toast
     } catch (error) {
       console.error("Error adding document: ", error);
+      notify("Error adding item. Please try again.", "add_item_error"); // Error toast
     }
   };
 
@@ -104,14 +125,26 @@ const Inventory = () => {
 
         // Update local state
         setItems(updatedItems);
+        notify(
+          `Item availability updated to ${
+            itemToUpdate.available ? "available" : "not available"
+          }.`,
+          "availability_updated",
+          "success"
+        ); // Success toast
       } catch (error) {
         console.error("Error updating availability: ", error);
+        notify(
+          "Error updating item availability. Please try again.",
+          "availability_error"
+        ); // Error toast
       }
     }
   };
 
   const handleEditItem = (index) => {
     setEditItemIndex(index);
+
     const itemToEdit = items[index];
     if (itemToEdit) {
       setEditedItem({ ...itemToEdit });
@@ -120,6 +153,14 @@ const Inventory = () => {
 
   const handleUpdateItem = async () => {
     if (editItemIndex !== null) {
+      // Validate the edited item fields
+      if (!editedItem.name || editedItem.onHand < 0) {
+        notify(
+          "Please fill in all required fields and ensure 'On Hand' is not negative.",
+          "missing_fields"
+        );
+        return;
+      }
       const updatedItems = [...items];
       updatedItems[editItemIndex] = {
         ...editedItem,
@@ -132,8 +173,10 @@ const Inventory = () => {
         setItems(updatedItems);
         setEditItemIndex(null);
         setEditedItem({ name: "", productId: "", available: true, onHand: 0 });
+        notify("Item updated successfully!", "item_updated", "success"); // Success toast
       } catch (error) {
         console.error("Error updating document: ", error);
+        notify("Error updating item. Please try again.", "update_item_error"); // Error toast
       }
     }
   };
@@ -249,6 +292,7 @@ const Inventory = () => {
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
       <div className="flex-grow p-8 bg-gray-100 lg:ml-[250px] ml-0">
+        <ToastContainer />
         <div className="mb-8 flex flex-col sm:flex-row items-center justify-between">
           <div className="flex flex-wrap items-center mb-4 sm:mb-0">
             <button
@@ -297,7 +341,7 @@ const Inventory = () => {
           onClick={() => setFormVisible(!isFormVisible)}
           className="flex items-center px-4 py-2 rounded-lg bg-brown-500 text-white hover:bg-brown-600 mb-4 text-sm md:text-base"
         >
-          <FaPlus className="mr-2" /> Add Item
+          {isFormVisible ? <>Cancel</> : <>Add Item</>}
         </button>
         {isFormVisible && (
           <div className="mb-8 p-4 bg-white rounded-lg shadow-md">

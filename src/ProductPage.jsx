@@ -23,6 +23,18 @@ import {
   updateDoc,
 } from "./config/firebase";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+};
 
 const ProductPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,6 +43,8 @@ const ProductPage = () => {
   const [isEditVisible, setEditVisible] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [viewProduct, setViewProduct] = useState(null);
+  const [deleteProductId, setDeleteProductId] = useState(null); // State to hold the ID of the product to be deleted
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -66,6 +80,7 @@ const ProductPage = () => {
 
     setProducts((prevProducts) => [...prevProducts, newProductWithId]);
     setFormVisible(false);
+    notify("Product added successfully!", "add_product_success", "success");
   };
 
   const toggleAvailability = async (id) => {
@@ -89,9 +104,17 @@ const ProductPage = () => {
             product.id === id ? updatedProduct : product
           )
         );
+        notify(
+          "Product availability updated successfully!",
+          "update_availability_success",
+          "success"
+        );
       } catch (error) {
         console.error("Error updating document: ", error);
-        alert("Failed to update availability. Please try again.");
+        notify(
+          "Failed to update availability. Please try again.",
+          "update_availability_error"
+        );
       }
     }
   };
@@ -124,18 +147,39 @@ const ProductPage = () => {
     );
     setEditVisible(false);
     setEditProduct(null);
+    notify(
+      "Product updated successfully!",
+      "update_product_success",
+      "success"
+    );
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+  const handleDeleteProduct = (id) => {
+    setDeleteProductId(id);
+    setDeleteModalVisible(true); // Show the delete confirmation modal
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (deleteProductId) {
       try {
-        await deleteDoc(doc(db, "products", id));
+        await deleteDoc(doc(db, "products", deleteProductId));
         setProducts((prevProducts) =>
-          prevProducts.filter((product) => product.id !== id)
+          prevProducts.filter((product) => product.id !== deleteProductId)
+        );
+        notify(
+          "Product deleted successfully!",
+          "delete_product_success",
+          "success"
         );
       } catch (error) {
         console.error("Error deleting product: ", error);
-        alert("Failed to delete the product. Please try again.");
+        notify(
+          "Failed to delete the product. Please try again.",
+          "delete_product_error"
+        );
+      } finally {
+        setDeleteModalVisible(false); // Close the modal after deletion
+        setDeleteProductId(null); // Reset the product ID
       }
     }
   };
@@ -152,6 +196,7 @@ const ProductPage = () => {
     <div className="p-6 lg:ml-64 bg-gray-100 min-h-screen">
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
+        <ToastContainer />
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-bold mb-4 md:mb-0">Products</h2>
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto">
@@ -169,7 +214,6 @@ const ProductPage = () => {
               onClick={() => setFormVisible(!isFormVisible)}
               className="flex items-center justify-center w-full md:w-auto px-4 py-2 bg-brown-500 text-white rounded-lg hover:bg-brown-600"
             >
-              <FaPlus className="mr-2" />
               {isFormVisible ? "Cancel" : "Add Product"}
             </button>
           </div>
@@ -288,6 +332,28 @@ const ProductPage = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        )}
+        {isDeleteModalVisible && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+              <h3 className="text-xl font-bold mb-4">Confirm Deletion</h3>
+              <p>Are you sure you want to delete this product?</p>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setDeleteModalVisible(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 mr-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteProduct}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         )}

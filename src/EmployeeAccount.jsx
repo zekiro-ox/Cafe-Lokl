@@ -23,6 +23,18 @@ import {
   deleteUser,
 } from "firebase/auth";
 import { auth } from "./config/firebase";
+import { ToastContainer, toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+
+const notify = (message, id, type = "error") => {
+  if (!toast.isActive(id)) {
+    if (type === "error") {
+      toast.error(message, { toastId: id });
+    } else if (type === "success") {
+      toast.success(message, { toastId: id });
+    }
+  }
+};
 
 const EmployeeAccount = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,6 +80,7 @@ const EmployeeAccount = () => {
   const handleAddEmployee = async () => {
     if (newEmployee.password !== newEmployee.confirmPassword) {
       setPasswordError("Passwords do not match.");
+      notify("Passwords do not match.", "password_mismatch"); // Toast for password mismatch
       return;
     }
 
@@ -102,12 +115,15 @@ const EmployeeAccount = () => {
         position: "",
       });
       setPasswordError("");
+      notify("Employee added successfully!", "employee_added", "success"); // Success toast
     } catch (error) {
       console.error("Error adding employee: ", error);
       if (error.code === "auth/email-already-in-use") {
         setPasswordError("Email already in use.");
+        notify("Email already in use.", "email_in_use"); // Toast for email already in use
       } else {
         setPasswordError("Error creating account.");
+        notify("Error creating account.", "account_creation_error"); // Toast for account creation error
       }
     }
   };
@@ -133,8 +149,13 @@ const EmployeeAccount = () => {
       setShowEditForm(false);
       setSelectedEmployee(null);
       setPasswordError("");
+      notify("Employee updated successfully!", "employee_updated", "success"); // Success toast
     } catch (error) {
       console.error("Error editing employee: ", error);
+      notify(
+        "Error updating employee. Please try again.",
+        "update_employee_error"
+      ); // Toast for update error
     }
   };
   const handleDelete = async (employee) => {
@@ -149,26 +170,31 @@ const EmployeeAccount = () => {
       if (user && user.uid === employee.uid) {
         // Only delete if the current user matches the employee's UID
         await deleteUser(user);
+        notify("Employee deleted successfully!", "employee_deleted", "success"); // Success toast
       } else {
         // If the user is not signed in, you cannot delete them directly
         console.error("User  not signed in or does not match.");
-        alert("User  not signed in or does not match.");
+        notify("User  not signed in or does not match.", "user_not_signed_in"); // Toast for user not signed in
       }
 
       // Update the local employees state
       setEmployees(employees.filter((e) => e.uid !== employee.uid));
     } catch (error) {
       console.error("Error deleting employee: ", error);
-      alert("Error deleting employee. Please try again.");
+      notify(
+        "Error deleting employee. Please try again.",
+        "delete_employee_error"
+      ); // Toast for delete error
     }
   };
   const sendResetPasswordEmail = async (email) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      alert("Password reset email sent!");
+      setShowEditForm(false);
+      notify("Password reset email sent!", "reset_email_sent", "success"); // Success toast
     } catch (error) {
       console.error("Error sending password reset email: ", error);
-      alert("Error sending password reset email.");
+      notify("Error sending password reset email.", "reset_email_error"); // Toast for reset email error
     }
   };
 
@@ -195,6 +221,7 @@ const EmployeeAccount = () => {
     <div className="p-6 lg:ml-64 bg-gray-100 min-h-screen">
       <Sidebar />
       <div className="p-6 bg-white shadow-lg rounded-lg mt-6">
+        <ToastContainer />
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-bold mb-4 md:mb-0">Employee Accounts</h2>
           <div className="flex items-center space-x-4">
