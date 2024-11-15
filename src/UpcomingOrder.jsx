@@ -35,10 +35,10 @@ const UpcomingOrders = () => {
   const [view, setView] = useState("upcoming");
 
   const statuses = [
-    "Order confirmed! It will take 15 mins before availability for pick up",
-    "Order confirmed! It will take 10 mins before availability for pick up",
-    "Order confirmed! It will take 5 mins before availability for pick up",
-    "Order confirmed! It will take 3 mins before availability for pick up",
+    "30 minutes to go! Swing by soon to grab your order!",
+    "20 minutes left! Your pick-up time is approaching fast!",
+    "10 minutes remaining! Almost time to pick up your order!",
+    "5 minutes left! Hurry over to collect your order!",
     "Your drinks is almost finished and will be ready for pick up",
     "Brew-tiful News! Your Drink’s Ready for You!",
   ];
@@ -60,6 +60,7 @@ const UpcomingOrders = () => {
             createdAt: createdAt,
             uid: data.uid || "",
             specialRemarks: data.specialRemarks || "None",
+            pickupTime: data.pickupTime,
           };
         });
 
@@ -169,6 +170,7 @@ const UpcomingOrders = () => {
             <th className="py-3 px-4 text-left">Product Name</th>
             <th className="py-3 px-4 text-left">Ingredients</th>
             <th className="py-3 px-4 text-left">Special Remarks</th>
+            <th className="py-3 px-4 text-left">Pick-up Time</th>
             <th className="py-3 px-4 text-left">Total Amount</th>
             <th className="py-3 px-4 text-left">Order Date</th>
             <th className="py-3 px-4 text-center">Actions</th>
@@ -191,6 +193,7 @@ const UpcomingOrders = () => {
                     : "No ingredients available"}
                 </td>
                 <td className="py-3 px-4">{order.specialRemarks}</td>
+                <td className="py-3 px-4">{order.pickupTime}</td>
                 <td className="py-3 px-4">P{order.totalPrice.toFixed(2)}</td>
                 <td className="py-3 px-4">
                   {formatOrderDate(order.createdAt)}

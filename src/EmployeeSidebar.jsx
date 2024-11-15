@@ -6,6 +6,7 @@ import {
   FaUserClock,
   FaSignOutAlt,
   FaWarehouse,
+  FaUserTie,
 } from "react-icons/fa";
 import { FaCartShopping } from "react-icons/fa6";
 import logo from "./assets/logo.png"; // Update the path as necessary
@@ -62,6 +63,7 @@ const EmployeeSidebar = () => {
           </div>
           <ul className="space-y-2 font-medium text-white">
             <li className="flex items-center p-4 rounded text-white font-bold text-2xl">
+              <FaUserTie className="flex-shrink-0 w-5 h-5 mr-2" />
               <span className="flex-1 ms-3 whitespace-nowrap">Employee</span>
             </li>
             <li>
