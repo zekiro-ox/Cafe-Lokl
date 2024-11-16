@@ -15,6 +15,7 @@ import {
 import EmployeeSidebar from "./EmployeeSidebar";
 import { ToastContainer, toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+import { useSession } from "./SessionContext";
 
 const notify = (message, id, type = "error") => {
   if (!toast.isActive(id)) {
@@ -28,13 +29,14 @@ const notify = (message, id, type = "error") => {
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
+  const { isSessionActive, setIsSessionActive, currentLogId, setCurrentLogId } =
+    useSession();
   const [employeeName, setEmployeeName] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [status, setStatus] = useState("Clocked Out");
   const [timer, setTimer] = useState(0);
-  const [currentLogId, setCurrentLogId] = useState(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [justClockedIn, setJustClockedIn] = useState(false);
   // Store user ID
   const timerRef = useRef(null);
 
@@ -72,6 +74,17 @@ const EmployeeDashboard = () => {
       }
     };
   }, [navigate]);
+  useEffect(() => {
+    const storedIsSessionActive =
+      localStorage.getItem("isSessionActive") === "true";
+    const storedLogId = localStorage.getItem("currentLogId");
+
+    if (storedIsSessionActive) {
+      setIsSessionActive(true);
+      setCurrentLogId(storedLogId);
+      setStatus("Clocked In");
+    }
+  }, []);
 
   const fetchAttendanceRecords = (docId) => {
     const logsCollection = collection(db, "timelogs", docId, "logs");
@@ -141,7 +154,10 @@ const EmployeeDashboard = () => {
 
         setCurrentLogId(logRef.id);
         setStatus("Clocked In");
-        setIsSessionActive(true); // Start the session
+        setIsSessionActive(true);
+        localStorage.setItem("isSessionActive", "true"); // Persist in local storage
+        localStorage.setItem("currentLogId", logRef.id);
+        setJustClockedIn(true); // Start the session
         startTimer();
         notify("Clocked In successfully!", "clock_in_success", "success"); // Toast for successful clock in
       } catch (error) {
@@ -214,6 +230,7 @@ const EmployeeDashboard = () => {
 
         fetchAttendanceRecords(docId);
         setStatus("Clocked In");
+        setJustClockedIn(false);
         startTimer();
         notify("Break ended!", "break_end_success", "success"); // Toast for successful break end
       } catch (error) {
@@ -253,6 +270,9 @@ const EmployeeDashboard = () => {
         setIsSessionActive(false);
         stopTimer();
         setCurrentLogId(null);
+        localStorage.removeItem("isSessionActive"); // Clear from local storage
+        localStorage.removeItem("currentLogId");
+        setJustClockedIn(false);
         notify("Clocked Out successfully!", "clock_out_success", "success"); // Toast for successful clock out
       } catch (error) {
         console.error("Error recording Time Out:", error);
@@ -268,7 +288,13 @@ const EmployeeDashboard = () => {
     const currentRecord = attendanceRecords.find(
       (record) => record.id === currentLogId
     );
-    return !currentRecord || !currentRecord.timeIn || status === "Clocked Out";
+    return (
+      !currentRecord ||
+      !currentRecord.timeIn ||
+      status === "Clocked Out" ||
+      (status === "On Break" && !currentRecord.breakEnd) ||
+      (status === "Clocked In" && justClockedIn)
+    );
   };
 
   const startTimer = () => {

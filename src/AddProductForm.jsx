@@ -65,6 +65,7 @@ const AddProductForm = ({ onAddProduct }) => {
     const file = event.target.files[0];
     if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
       setImage(file);
+      notify("Image Added", "image_added", "success");
     } else {
       notify("Please upload a valid image file (JPG or PNG).", "invalid_image");
       setImage(null);
