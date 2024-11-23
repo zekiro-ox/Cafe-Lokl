@@ -32,6 +32,7 @@ const EmployeeDashboard = () => {
   const { isSessionActive, setIsSessionActive, currentLogId, setCurrentLogId } =
     useSession();
   const [employeeName, setEmployeeName] = useState("");
+  const [isBreakEnded, setIsBreakEnded] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [status, setStatus] = useState("Clocked Out");
   const [timer, setTimer] = useState(0);
@@ -219,6 +220,7 @@ const EmployeeDashboard = () => {
           status: "Clocked In",
           breakEnd: Timestamp.fromDate(new Date()),
         });
+        setIsBreakEnded(true);
 
         setAttendanceRecords((prevRecords) =>
           prevRecords.map((record) =>
@@ -354,7 +356,9 @@ const EmployeeDashboard = () => {
             <button
               onClick={handleBreakStart}
               className="bg-yellow-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 hover:bg-yellow-600 disabled:opacity-50"
-              disabled={status !== "Clocked In" || !isSessionActive}
+              disabled={
+                status !== "Clocked In" || !isSessionActive || isBreakEnded
+              }
             >
               <FaPause className="text-lg" />
               <span className="hidden sm:inline">Break Start</span>

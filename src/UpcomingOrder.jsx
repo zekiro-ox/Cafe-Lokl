@@ -91,6 +91,23 @@ const UpcomingOrders = () => {
         };
       });
 
+      // Sort the fetched orders
+      fetchedHistoryOrders.sort((a, b) => {
+        // Compare by year and month first
+        const yearA = a.createdAt.getFullYear();
+        const monthA = a.createdAt.getMonth();
+        const yearB = b.createdAt.getFullYear();
+        const monthB = b.createdAt.getMonth();
+
+        if (yearA !== yearB) {
+          return yearB - yearA; // Sort by year descending
+        }
+        return monthB - monthA; // Sort by month descending
+      });
+
+      // Now sort by date within the same month
+      fetchedHistoryOrders.sort((a, b) => b.createdAt - a.createdAt);
+
       setHistoryOrders(fetchedHistoryOrders);
     } catch (err) {
       console.error("Error fetching history orders:", err);
