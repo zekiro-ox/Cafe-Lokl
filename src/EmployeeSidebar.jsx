@@ -25,7 +25,7 @@ const EmployeeSidebar = () => {
     localStorage.removeItem("rememberedEmployeeEmail");
     localStorage.removeItem("employeeDocId");
     // Navigate to login page
-    navigate("/employee-login");
+    navigate("/employee-login", { replace: true });
   };
 
   const toggleSidebar = () => {

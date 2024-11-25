@@ -17,6 +17,7 @@ import {
   getDocs,
   collection,
 } from "firebase/firestore";
+import { useAuth } from "./AuthProvider";
 
 import { ToastContainer, toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles
@@ -44,6 +45,7 @@ const Login = () => {
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimer, setLockTimer] = useState(null);
+  const { setIsAuthenticated } = useAuth();
   const [remainingTime, setRemainingTime] = useState(0); // State for remaining time
 
   useEffect(() => {
@@ -104,12 +106,14 @@ const Login = () => {
       } else {
         localStorage.removeItem("rememberedEmail");
       }
+      setIsAuthenticated(true);
       notify("Login successful! Redirecting...", "login-success", "success");
 
       // Delay navigation for the success toast
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }, 2000);
+      return;
     } catch (error) {
       setIsLoading(false);
       setAttempts((prevAttempts) => {

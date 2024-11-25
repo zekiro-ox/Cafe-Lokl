@@ -8,7 +8,7 @@ import { signInWithEmailAndPassword } from "firebase/auth"; // Import signInWith
 import { getDocs, query, where, collection } from "firebase/firestore";
 import { ToastContainer, toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles
-
+import { useAuth } from "./AuthProvider";
 const notify = (message, id, type = "error") => {
   if (!toast.isActive(id)) {
     if (type === "error") {
@@ -29,6 +29,7 @@ const EmployeeLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const { setIsAuthenticated } = useAuth();
   const [remainingTime, setRemainingTime] = useState(0); // State for remaining time
 
   useEffect(() => {
@@ -86,13 +87,19 @@ const EmployeeLogin = () => {
       if (!querySnapshot.empty) {
         // User exists in Firestore, proceed to navigate
         localStorage.setItem("rememberedEmployeeEmail", email);
-        localStorage.setItem("employeeDocId", querySnapshot.docs[0].id); // Store the document ID
+        localStorage.setItem("employeeDocId", querySnapshot.docs[0].id);
+        setIsAuthenticated(true); // Store the document ID
         notify("Login successful! Redirecting...", "login-success", "success");
         setTimeout(() => {
-          navigate("/employee-dashboard", {
-            state: { employeeDocId: querySnapshot.docs[0].id },
-          });
+          navigate(
+            "/employee-dashboard",
+            { replace: true },
+            {
+              state: { employeeDocId: querySnapshot.docs[0].id },
+            }
+          );
         }, 2000);
+        return;
       } else {
         // User does not exist in Firestore
         handleFailedAttempt();

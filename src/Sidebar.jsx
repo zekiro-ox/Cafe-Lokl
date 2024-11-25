@@ -28,7 +28,7 @@ const Sidebar = () => {
   const handleLogout = () => {
     setIsLoggingOut(true);
     setTimeout(() => {
-      navigate("/");
+      navigate("/", { replace: true });
     }, 1000);
   };
 
