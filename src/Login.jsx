@@ -122,10 +122,7 @@ const Login = () => {
           setIsLocked(true);
           notify("Too many failed attempts. Please try again later.", "locked");
         } else {
-          notify(
-            error.message || "Invalid email or password. Please try again.",
-            "login_error"
-          );
+          notify("Invalid email or password. Please try again.", "login_error");
         }
         return newAttempts;
       });
@@ -167,10 +164,7 @@ const Login = () => {
         "success"
       );
     } catch (error) {
-      notify(
-        error.message || "Failed to send password reset email.",
-        "reset_email_error"
-      );
+      notify("Failed to send password reset email.", "reset_email_error");
       console.error("Error sending password reset email:", error);
     }
   };
