@@ -107,7 +107,11 @@ const Login = () => {
         localStorage.removeItem("rememberedEmail");
       }
       setIsAuthenticated(true);
-      notify("Login successful! Redirecting...", "login-success", "success");
+      notify(
+        "Admin Login Successful! Redirecting...",
+        "login-success",
+        "success"
+      );
 
       // Delay navigation for the success toast
       setTimeout(() => {

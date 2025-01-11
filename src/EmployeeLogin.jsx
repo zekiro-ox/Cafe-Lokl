@@ -89,7 +89,11 @@ const EmployeeLogin = () => {
         localStorage.setItem("rememberedEmployeeEmail", email);
         localStorage.setItem("employeeDocId", querySnapshot.docs[0].id);
         setIsAuthenticated(true); // Store the document ID
-        notify("Login successful! Redirecting...", "login-success", "success");
+        notify(
+          "Employee Login Successful! Redirecting...",
+          "login-success",
+          "success"
+        );
         setTimeout(() => {
           navigate(
             "/employee-dashboard",
